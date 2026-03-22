@@ -160,6 +160,22 @@ function App() {
     setBlackHand(['rook', 'knight', 'bishop', 'pawn']);
   };
 
+  const getPawnDisplayDirection = (piece, index) => {
+    if (!piece || piece.type !== 'pawn') return undefined;
+
+    let direction = piece.direction;
+    if (direction === undefined) {
+      direction = piece.player === 'white' ? -1 : 1;
+    }
+
+    const row = Math.floor(index / 4);
+    if ((row === 0 && direction === -1) || (row === 3 && direction === 1)) {
+      direction *= -1;
+    }
+
+    return direction;
+  };
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col items-center justify-center p-4 m-0 absolute inset-0 overflow-hidden">
       {/* Title */}
@@ -202,6 +218,7 @@ function App() {
               const col = index % 4;
               const isLight = (row + col) % 2 === 0;
               const isSelected = selectedPiece?.from === index;
+              const pawnDirection = getPawnDisplayDirection(piece, index);
 
               return (
                 <div
@@ -217,7 +234,11 @@ function App() {
                 >
                   {piece && (
                     <div className={`${isSelected ? 'scale-110' : 'scale-100'} transition-transform duration-300`}>
-                      <ChessPiece type={piece.type} player={piece.player} />
+                      <ChessPiece
+                        type={piece.type}
+                        player={piece.player}
+                        direction={pawnDirection}
+                      />
                     </div>
                   )}
                   <span className="absolute bottom-1 right-2 text-[10px] text-black/40 font-mono select-none font-bold">
