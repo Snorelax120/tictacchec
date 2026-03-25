@@ -1,78 +1,141 @@
-# Tic Tac Chec Project
+# Tic Tac Chec
 
-A full-stack application with Vite React frontend and Node.js Express backend with Socket.io for real-time communication.
+Tic Tac Chec is a React app with:
+- local over-the-board play
+- online code-based lobbies
+- a Cloudflare Workers backend with Durable Objects for live multiplayer
 
 ## Project Structure
 
-```
+```text
 tictacchec/
-├── client/          # Vite React application with Tailwind CSS
-│   ├── src/
-│   ├── public/
-│   └── package.json
-└── server/          # Node.js Express server with Socket.io
-    ├── index.js
-    └── package.json
+├── client/          # Vite React frontend
+├── shared/          # Shared game rules used by local + online play
+├── worker/          # Cloudflare Worker + Durable Object backend
+└── server/          # Legacy Node/Socket.io prototype backend
 ```
 
-## Client (Frontend)
+## Local Development
 
-**Technologies:**
-- Vite
-- React
-- Tailwind CSS
-- Socket.io-client
-- Lucide React (icons)
+Install dependencies:
 
-**Getting Started:**
 ```bash
+cd /Users/ritwik/Projects/tictacchec
+npm install
 cd client
 npm install
+```
+
+Run the frontend:
+
+```bash
+cd /Users/ritwik/Projects/tictacchec/client
 npm run dev
 ```
 
-The client will run on `http://localhost:5173`
+Run the Worker locally:
 
-## Server (Backend)
-
-**Technologies:**
-- Node.js
-- Express
-- Socket.io
-- CORS
-
-**Getting Started:**
 ```bash
-cd server
-npm install
-npm start
+cd /Users/ritwik/Projects/tictacchec
+npx wrangler dev
 ```
 
-The server will run on `http://localhost:3000`
+The frontend uses the Vite proxy to talk to the local Worker during development.
 
-## Development
+## Build
 
-1. Start the server:
-   ```bash
-   cd server
-   npm run dev
-   ```
+Build the frontend assets:
 
-2. In a new terminal, start the client:
-   ```bash
-   cd client
-   npm run dev
-   ```
+```bash
+cd /Users/ritwik/Projects/tictacchec
+npm run build
+```
 
-## Socket.io Connection
+## Deploy To Cloudflare
 
-The client and server are configured to communicate via Socket.io:
-- Server listens on port 3000
-- Client connects to `http://localhost:3000`
-- CORS is configured to allow connections from `http://localhost:5173`
+This project is deployed with Wrangler, not with a connected Git repo in the Cloudflare dashboard.
+
+Login once:
+
+```bash
+cd /Users/ritwik/Projects/tictacchec
+npx wrangler login
+```
+
+Deploy the app:
+
+```bash
+cd /Users/ritwik/Projects/tictacchec
+npx wrangler deploy
+```
+
+The live Worker URL is:
+
+```text
+https://tictacchec.roy-ritwik12.workers.dev
+```
+
+## Everyday Update Workflow
+
+When you change the app:
+
+1. Edit your code.
+2. Build it locally:
+
+```bash
+cd /Users/ritwik/Projects/tictacchec
+npm run build
+```
+
+3. Deploy the live app:
+
+```bash
+npx wrangler deploy
+```
+
+4. Commit and push your code:
+
+```bash
+git add .
+git commit -m "Describe your change"
+git push origin main
+```
+
+Important:
+- `npx wrangler deploy` updates the live Cloudflare app.
+- `git push origin main` updates GitHub only.
+- Pushing to GitHub does not deploy this app by itself.
+
+## Secrets And Environment Safety
+
+Current status:
+- no Cloudflare Worker secrets are configured
+- no `.env` values are tracked in git
+- `.env`, `.env.local`, `.dev.vars`, and similar local secret files are ignored
+
+Useful commands:
+
+List Cloudflare Worker secrets:
+
+```bash
+cd /Users/ritwik/Projects/tictacchec
+npx wrangler secret list
+```
+
+Add a Cloudflare Worker secret:
+
+```bash
+cd /Users/ritwik/Projects/tictacchec
+npx wrangler secret put SECRET_NAME
+```
+
+Check whether secret files are staged:
+
+```bash
+git status
+```
 
 ## Notes
 
-- Make sure both server and client are running for full functionality
-- The Tailwind directives are configured in `client/src/index.css`
-- Socket.io events can be added in `server/index.js` and handled in your React components
+- The online mode stores a reconnect session token in browser `localStorage` so players can rejoin the same lobby after a refresh or short disconnect.
+- The `server/` folder is still in the repo as an older backend approach, but the current hosted app uses the Cloudflare Worker in `worker/`.

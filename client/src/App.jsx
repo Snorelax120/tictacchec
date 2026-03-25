@@ -1,333 +1,1390 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ChessPiece from './components/ChessPiece';
-import { isValidMove } from '../../server/gameUtils'; // Add import for validation
+import {
+  applyMoveToGameState,
+  createInitialGameState,
+  getPawnDisplayDirection,
+} from '@shared/gameRules.js';
+import {
+  buildSocketUrl,
+  clearActiveOnlineSession,
+  createOnlineLobby,
+  joinOnlineLobby,
+  loadActiveOnlineSession,
+  saveActiveOnlineSession,
+} from './lib/onlineSession';
+
+const RULE_SECTIONS = [
+  {
+    title: 'What Is Tic Tac Chec?',
+    body:
+      'Tic Tac Chec blends a 4x4 tic-tac-toe win condition with chess-style movement. You are not trying to checkmate. You are trying to build a line of four pieces in your color.',
+  },
+  {
+    title: 'How A Turn Works',
+    body:
+      'White starts. On your turn, either place one piece from your hand on an empty square or move one of your pieces already on the board using its chess movement.',
+  },
+  {
+    title: 'Winning The Game',
+    body:
+      'Make a full row, column, or diagonal of four pieces in your color anywhere on the 4x4 board. The first player to complete a line wins immediately.',
+  },
+];
+
+const ONLINE_DEFAULTS = {
+  createName: '',
+  createColorChoice: 'white',
+  joinName: '',
+  joinCode: '',
+};
+
+function getLocalPlayerLabel(color) {
+  return color === 'white' ? 'White' : 'Black';
+}
+
+function getOnlinePlayerLabel(snapshot, color) {
+  return snapshot?.players?.[color]?.name || (color === 'white' ? 'White' : 'Black');
+}
+
+function getOnlineStatusMessage(snapshot) {
+  if (!snapshot) {
+    return 'Connecting to lobby...';
+  }
+
+  if (snapshot.phase === 'waiting') {
+    return snapshot.statusMessage || 'Waiting for an opponent to join.';
+  }
+
+  if (snapshot.game.winner) {
+    return snapshot.statusMessage || `${getOnlinePlayerLabel(snapshot, snapshot.game.winner)} wins.`;
+  }
+
+  if (snapshot.closedReason === 'disconnect_timeout') {
+    return snapshot.statusMessage || 'The match ended because a player disconnected.';
+  }
+
+  return snapshot.statusMessage || `${getOnlinePlayerLabel(snapshot, snapshot.game.turn)} to move.`;
+}
+
+function buildMoveFromSelection(board, selectedPiece, index) {
+  if (!selectedPiece) {
+    return null;
+  }
+
+  if (selectedPiece.from === null) {
+    if (board[index] !== null) {
+      return null;
+    }
+
+    return {
+      player: selectedPiece.player,
+      type: selectedPiece.type,
+      from: null,
+      to: index,
+    };
+  }
+
+  if (selectedPiece.from === index) {
+    return 'clear';
+  }
+
+  const occupant = board[index];
+  if (occupant && occupant.player === selectedPiece.player) {
+    return {
+      player: occupant.player,
+      type: occupant.type,
+      from: index,
+      reselection: true,
+    };
+  }
+
+  return {
+    player: selectedPiece.player,
+    type: selectedPiece.type,
+    from: selectedPiece.from,
+    to: index,
+  };
+}
+
+function buildWaitingSummary(snapshot) {
+  if (!snapshot) {
+    return {
+      title: 'Connecting to lobby',
+      detail: 'Opening your room and waiting for the server snapshot.',
+    };
+  }
+
+  if (snapshot.hostColorChoice === 'random') {
+    return {
+      title: 'Color assignment will be random',
+      detail: 'As soon as player two joins, the server will decide white and black and start the game.',
+    };
+  }
+
+  return {
+    title: `Host chose ${snapshot.hostColorChoice}`,
+    detail: 'White always moves first. Once your opponent joins, the game will start immediately.',
+  };
+}
 
 function App() {
-  // Initial game state
-  const [board, setBoard] = useState(Array(16).fill(null)); // 4x4 board = 16 squares
-  const [currentTurn, setCurrentTurn] = useState('white'); // 'white' or 'black'
-  const [selectedPiece, setSelectedPiece] = useState(null); // { type, player, from } or null
-  const [winner, setWinner] = useState(null);
-  
-  // Initial hands for each player
-  const [whiteHand, setWhiteHand] = useState(['rook', 'knight', 'bishop', 'pawn']);
-  const [blackHand, setBlackHand] = useState(['rook', 'knight', 'bishop', 'pawn']);
+  const [activeScreen, setActiveScreen] = useState('menu');
+  const [localGame, setLocalGame] = useState(createInitialGameState);
+  const [selectedLocalPiece, setSelectedLocalPiece] = useState(null);
+  const [onlineForms, setOnlineForms] = useState(ONLINE_DEFAULTS);
+  const [onlineSession, setOnlineSession] = useState(null);
+  const [onlineSnapshot, setOnlineSnapshot] = useState(null);
+  const [selectedOnlinePiece, setSelectedOnlinePiece] = useState(null);
+  const [onlineFlashMessage, setOnlineFlashMessage] = useState('');
+  const [copyNotice, setCopyNotice] = useState('');
+  const [socketStatus, setSocketStatus] = useState('idle');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reconnectNonce, setReconnectNonce] = useState(0);
+  const socketRef = useRef(null);
+  const reconnectTimerRef = useRef(null);
+  const manualDisconnectRef = useRef(false);
 
-  // Handle clicking on a square on the board
-  const handleSquareClick = (index) => {
-    if (winner) return; // Game is over
+  useEffect(() => {
+    const restoredSession = loadActiveOnlineSession();
 
-    const piece = board[index];
+    if (restoredSession) {
+      setOnlineSession(restoredSession);
+      setActiveScreen('online-room');
+      setOnlineFlashMessage('Restoring your online lobby...');
+    }
+  }, []);
 
-    if (selectedPiece) {
-      // A piece is selected, try to place or move it
-      
-      if (selectedPiece.from === null) {
-        // ==== PLACING A PIECE FROM HAND ====
-        if (piece === null) {
-          // Empty square - place the piece
-          const newBoard = [...board];
-          newBoard[index] = { type: selectedPiece.type, player: selectedPiece.player };
-          setBoard(newBoard);
+  useEffect(() => {
+    if (!onlineSession) {
+      return undefined;
+    }
 
-          // Remove from hand
-          if (selectedPiece.player === 'white') {
-            setWhiteHand(whiteHand.filter((p, i) => i !== whiteHand.indexOf(selectedPiece.type)));
-          } else {
-            setBlackHand(blackHand.filter((p, i) => i !== blackHand.indexOf(selectedPiece.type)));
-          }
+    manualDisconnectRef.current = false;
 
-          setSelectedPiece(null);
-          setCurrentTurn(currentTurn === 'white' ? 'black' : 'white');
-          checkForWinner(newBoard);
-        } else {
-          // Square occupied - deselect and show feedback
-          setSelectedPiece(null);
-        }
-      } else {
-        // ==== MOVING A PIECE ON THE BOARD ====
-        
-        // Check if clicking the same piece (deselect)
-        if (selectedPiece.from === index) {
-          setSelectedPiece(null);
-          return;
-        }
+    const socket = new WebSocket(buildSocketUrl(onlineSession));
+    socketRef.current = socket;
+    setSocketStatus((currentStatus) => (currentStatus === 'connected' ? currentStatus : 'connecting'));
 
-        // Check if clicking your own piece (reselect)
-        if (piece && piece.player === selectedPiece.player) {
-          setSelectedPiece({ type: piece.type, player: piece.player, from: index });
-          return;
-        }
+    socket.addEventListener('open', () => {
+      setSocketStatus('connected');
+      socket.send(JSON.stringify({ type: 'resume' }));
+    });
 
-        // --- VALIDATE MOVE BEFORE PROCEEDING ---
-        const movePiece = board[selectedPiece.from];
-        if (!isValidMove(movePiece, selectedPiece.from, index, board)) {
-          // Invalid move - maybe show a visual cue, then deselect
-          setSelectedPiece(null);
-          return;
-        }
+    socket.addEventListener('message', (event) => {
+      let payload;
 
-        const newBoard = [...board];
-        
-        // Handle capture - return opponent's piece to their hand
-        if (piece && piece.player !== selectedPiece.player) {
-          if (piece.player === 'white') {
-            setWhiteHand([...whiteHand, piece.type]);
-          } else {
-            setBlackHand([...blackHand, piece.type]);
-          }
-        }
-
-        // Move the piece
-        newBoard[selectedPiece.from] = null;
-        
-        let movedPiece = { type: selectedPiece.type, player: selectedPiece.player };
-
-        // Handle Pawn Direction Updates
-        if (selectedPiece.type === 'pawn') {
-          let direction = movePiece.direction;
-          if (direction === undefined) {
-             direction = selectedPiece.player === 'white' ? -1 : 1;
-          }
-          
-          const fromRow = Math.floor(selectedPiece.from / 4);
-          if ((fromRow === 0 && direction === -1) || (fromRow === 3 && direction === 1)) {
-            direction *= -1;
-          }
-          movedPiece.direction = direction;
-        }
-
-        newBoard[index] = movedPiece;
-        setBoard(newBoard);
-        setSelectedPiece(null);
-        setCurrentTurn(currentTurn === 'white' ? 'black' : 'white');
-        checkForWinner(newBoard);
+      try {
+        payload = JSON.parse(event.data);
+      } catch {
+        return;
       }
-    } else {
-      // ==== NO PIECE SELECTED ====
-      // Try to select a piece on the board
-      if (piece && piece.player === currentTurn) {
-        setSelectedPiece({ type: piece.type, player: piece.player, from: index });
+
+      if (payload.type === 'snapshot') {
+        setOnlineSnapshot(payload);
+        setOnlineFlashMessage(payload.statusMessage || '');
+        setSelectedOnlinePiece(null);
+        saveActiveOnlineSession({
+          ...onlineSession,
+          code: payload.lobbyCode,
+          playerName: payload.you?.name || onlineSession.playerName,
+        });
+        setActiveScreen('online-room');
+        return;
       }
-    }
-  };
 
-  // Handle clicking a piece in the hand
-  const handleHandPieceClick = (type, player) => {
-    if (winner) return;
-    if (player !== currentTurn) return;
-
-    if (selectedPiece?.type === type && selectedPiece?.from === null) {
-      setSelectedPiece(null); // Deselect
-    } else {
-      setSelectedPiece({ type, player, from: null });
-    }
-  };
-
-  // Check for winner (4-in-a-row)
-  const checkForWinner = (currentBoard) => {
-    const lines = [
-      // Horizontal
-      [0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15],
-      // Vertical
-      [0, 4, 8, 12], [1, 5, 9, 13], [2, 6, 10, 14], [3, 7, 11, 15],
-      // Diagonal
-      [0, 5, 10, 15], [3, 6, 9, 12]
-    ];
-
-    for (const line of lines) {
-      const [a, b, c, d] = line;
-      if (currentBoard[a] && currentBoard[b] && currentBoard[c] && currentBoard[d]) {
-        if (
-          currentBoard[a].player === currentBoard[b].player &&
-          currentBoard[a].player === currentBoard[c].player &&
-          currentBoard[a].player === currentBoard[d].player
-        ) {
-          setWinner(currentBoard[a].player);
-          return;
-        }
+      if (payload.type === 'error') {
+        setOnlineFlashMessage(payload.message || 'Something went wrong.');
+        return;
       }
+
+      if (payload.type === 'system_notice') {
+        setOnlineFlashMessage(payload.message || '');
+        return;
+      }
+
+      if (payload.type === 'presence' || payload.type === 'rematch_status') {
+        return;
+      }
+    });
+
+    socket.addEventListener('close', () => {
+      socketRef.current = null;
+
+      if (manualDisconnectRef.current) {
+        setSocketStatus('idle');
+        return;
+      }
+
+      setSocketStatus('reconnecting');
+      setOnlineFlashMessage('Connection dropped. Trying to reconnect...');
+      reconnectTimerRef.current = window.setTimeout(() => {
+        setReconnectNonce((value) => value + 1);
+      }, 2000);
+    });
+
+    socket.addEventListener('error', () => {
+      setSocketStatus('error');
+    });
+
+    return () => {
+      if (reconnectTimerRef.current) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+
+      socket.close();
+      if (socketRef.current === socket) {
+        socketRef.current = null;
+      }
+    };
+  }, [onlineSession, reconnectNonce]);
+
+  const resetLocalGame = () => {
+    setLocalGame(createInitialGameState());
+    setSelectedLocalPiece(null);
+  };
+
+  const openMenu = () => {
+    setActiveScreen('menu');
+  };
+
+  const startLocalGame = () => {
+    resetLocalGame();
+    setActiveScreen('game-local');
+  };
+
+  const openRules = () => {
+    setActiveScreen('rules');
+  };
+
+  const openOnlineHome = () => {
+    setActiveScreen('online-home');
+    setOnlineFlashMessage('');
+  };
+
+  const updateOnlineForm = (key, value) => {
+    setOnlineForms((currentValue) => ({
+      ...currentValue,
+      [key]: value,
+    }));
+  };
+
+  const clearOnlineState = ({ keepFlashMessage = false } = {}) => {
+    manualDisconnectRef.current = true;
+    if (socketRef.current) {
+      try {
+        socketRef.current.send(JSON.stringify({ type: 'leave' }));
+      } catch {
+        // The socket may already be closed during reconnect handling.
+      }
+      socketRef.current.close();
+      socketRef.current = null;
+    }
+
+    if (reconnectTimerRef.current) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+
+    clearActiveOnlineSession();
+    setOnlineSession(null);
+    setOnlineSnapshot(null);
+    setSelectedOnlinePiece(null);
+    setSocketStatus('idle');
+
+    if (!keepFlashMessage) {
+      setOnlineFlashMessage('');
     }
   };
 
-  // Reset game
-  const resetGame = () => {
-    setBoard(Array(16).fill(null));
-    setCurrentTurn('white');
-    setSelectedPiece(null);
-    setWinner(null);
-    setWhiteHand(['rook', 'knight', 'bishop', 'pawn']);
-    setBlackHand(['rook', 'knight', 'bishop', 'pawn']);
+  const handleCreateLobby = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setOnlineFlashMessage('');
+
+    try {
+      const payload = await createOnlineLobby({
+        playerName: onlineForms.createName,
+        colorChoice: onlineForms.createColorChoice,
+      });
+
+      const nextSession = {
+        code: payload.code,
+        sessionToken: payload.sessionToken,
+        playerName: onlineForms.createName.trim(),
+        wsUrl: payload.wsUrl,
+      };
+
+      saveActiveOnlineSession(nextSession);
+      setOnlineSession(nextSession);
+      setOnlineSnapshot(payload.snapshot);
+      setActiveScreen('online-room');
+      setSocketStatus('connecting');
+      setSelectedOnlinePiece(null);
+      setOnlineFlashMessage('Lobby created. Share the code and wait for player two.');
+    } catch (error) {
+      setOnlineFlashMessage(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const getPawnDisplayDirection = (piece, index) => {
-    if (!piece || piece.type !== 'pawn') return undefined;
+  const handleJoinLobby = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setOnlineFlashMessage('');
 
-    let direction = piece.direction;
-    if (direction === undefined) {
-      direction = piece.player === 'white' ? -1 : 1;
+    try {
+      const payload = await joinOnlineLobby({
+        code: onlineForms.joinCode.trim().toUpperCase(),
+        playerName: onlineForms.joinName,
+      });
+
+      const nextSession = {
+        code: payload.code,
+        sessionToken: payload.sessionToken,
+        playerName: onlineForms.joinName.trim(),
+        wsUrl: payload.wsUrl,
+      };
+
+      saveActiveOnlineSession(nextSession);
+      setOnlineSession(nextSession);
+      setOnlineSnapshot(payload.snapshot);
+      setActiveScreen('online-room');
+      setSocketStatus('connecting');
+      setSelectedOnlinePiece(null);
+      setOnlineFlashMessage('Joined lobby. Opening the live board...');
+    } catch (error) {
+      setOnlineFlashMessage(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCopyLobbyCode = async () => {
+    if (!onlineSnapshot?.lobbyCode) {
+      return;
     }
 
-    const row = Math.floor(index / 4);
-    if ((row === 0 && direction === -1) || (row === 3 && direction === 1)) {
-      direction *= -1;
+    try {
+      await navigator.clipboard.writeText(onlineSnapshot.lobbyCode);
+      setCopyNotice('Lobby code copied.');
+      window.setTimeout(() => setCopyNotice(''), 1800);
+    } catch {
+      setCopyNotice('Copy failed. Select the code manually.');
+      window.setTimeout(() => setCopyNotice(''), 1800);
+    }
+  };
+
+  const handleLocalSquareClick = (index) => {
+    if (localGame.winner) {
+      return;
     }
 
-    return direction;
+    const board = localGame.board;
+    const clickedPiece = board[index];
+
+    if (!selectedLocalPiece) {
+      if (clickedPiece && clickedPiece.player === localGame.turn) {
+        setSelectedLocalPiece({
+          type: clickedPiece.type,
+          player: clickedPiece.player,
+          from: index,
+        });
+      }
+      return;
+    }
+
+    const nextMove = buildMoveFromSelection(board, selectedLocalPiece, index);
+
+    if (nextMove === 'clear') {
+      setSelectedLocalPiece(null);
+      return;
+    }
+
+    if (nextMove?.reselection) {
+      setSelectedLocalPiece({
+        type: nextMove.type,
+        player: nextMove.player,
+        from: nextMove.from,
+      });
+      return;
+    }
+
+    if (!nextMove) {
+      setSelectedLocalPiece(null);
+      return;
+    }
+
+    const result = applyMoveToGameState(localGame, nextMove);
+    if (!result.ok) {
+      setSelectedLocalPiece(null);
+      return;
+    }
+
+    setLocalGame(result.state);
+    setSelectedLocalPiece(null);
+  };
+
+  const handleLocalHandPieceClick = (type, player) => {
+    if (localGame.winner || player !== localGame.turn) {
+      return;
+    }
+
+    if (selectedLocalPiece?.type === type && selectedLocalPiece?.player === player && selectedLocalPiece?.from === null) {
+      setSelectedLocalPiece(null);
+      return;
+    }
+
+    setSelectedLocalPiece({ type, player, from: null });
+  };
+
+  const sendOnlineMessage = (payload) => {
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      setOnlineFlashMessage('The live connection is still reconnecting.');
+      return false;
+    }
+
+    socketRef.current.send(JSON.stringify(payload));
+    return true;
+  };
+
+  const handleOnlineSquareClick = (index) => {
+    if (!onlineSnapshot || onlineSnapshot.phase !== 'active') {
+      return;
+    }
+
+    const yourSeat = onlineSnapshot.yourSeat;
+    const board = onlineSnapshot.game.board;
+    const clickedPiece = board[index];
+
+    if (!yourSeat || onlineSnapshot.game.turn !== yourSeat || onlineSnapshot.game.winner) {
+      return;
+    }
+
+    if (!selectedOnlinePiece) {
+      if (clickedPiece && clickedPiece.player === yourSeat) {
+        setSelectedOnlinePiece({
+          type: clickedPiece.type,
+          player: clickedPiece.player,
+          from: index,
+        });
+      }
+      return;
+    }
+
+    const nextMove = buildMoveFromSelection(board, selectedOnlinePiece, index);
+
+    if (nextMove === 'clear') {
+      setSelectedOnlinePiece(null);
+      return;
+    }
+
+    if (nextMove?.reselection) {
+      setSelectedOnlinePiece({
+        type: nextMove.type,
+        player: nextMove.player,
+        from: nextMove.from,
+      });
+      return;
+    }
+
+    if (!nextMove) {
+      setSelectedOnlinePiece(null);
+      return;
+    }
+
+    if (sendOnlineMessage({ type: 'move', move: nextMove })) {
+      setSelectedOnlinePiece(null);
+    }
+  };
+
+  const handleOnlineHandPieceClick = (type, player) => {
+    if (!onlineSnapshot || onlineSnapshot.phase !== 'active') {
+      return;
+    }
+
+    if (onlineSnapshot.game.winner || player !== onlineSnapshot.yourSeat || player !== onlineSnapshot.game.turn) {
+      return;
+    }
+
+    if (selectedOnlinePiece?.type === type && selectedOnlinePiece?.player === player && selectedOnlinePiece?.from === null) {
+      setSelectedOnlinePiece(null);
+      return;
+    }
+
+    setSelectedOnlinePiece({ type, player, from: null });
+  };
+
+  const handleOnlineRematch = () => {
+    sendOnlineMessage({ type: 'rematch_request' });
+  };
+
+  const leaveOnlineLobby = (nextScreen = 'menu') => {
+    clearOnlineState();
+    setActiveScreen(nextScreen);
+  };
+
+  const localStatusMessage = localGame.winner
+    ? `${getLocalPlayerLabel(localGame.winner)} wins the game.`
+    : `${getLocalPlayerLabel(localGame.turn)} to move.`;
+
+  return (
+    <div className="h-screen w-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.2),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.18),_transparent_30%)] pointer-events-none" />
+      <div className="absolute left-[-10rem] top-20 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute right-[-8rem] bottom-10 h-72 w-72 rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
+
+      <div className="relative h-full w-full overflow-hidden px-3 py-3 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+        {activeScreen === 'menu' && (
+          <MenuScreen
+            onPlayOverBoard={startLocalGame}
+            onOpenRules={openRules}
+            onPlayOnline={openOnlineHome}
+            hasActiveSession={!!onlineSession}
+            onResumeOnline={() => setActiveScreen('online-room')}
+          />
+        )}
+
+        {activeScreen === 'rules' && <RulesScreen onBack={openMenu} />}
+
+        {activeScreen === 'game-local' && (
+          <GameScreen
+            board={localGame.board}
+            currentTurn={localGame.turn}
+            selectedPiece={selectedLocalPiece}
+            winner={localGame.winner}
+            blackHand={localGame.hands.black}
+            whiteHand={localGame.hands.white}
+            blackLabel="Black"
+            whiteLabel="White"
+            topStatus={localStatusMessage}
+            onSquareClick={handleLocalSquareClick}
+            onHandPieceClick={handleLocalHandPieceClick}
+            onBack={openMenu}
+            onPrimaryAction={localGame.winner ? resetLocalGame : null}
+            primaryActionLabel={localGame.winner ? 'Play Again' : null}
+            getPawnDirection={getPawnDisplayDirection}
+          />
+        )}
+
+        {activeScreen === 'online-home' && (
+          <OnlineHubScreen
+            onBack={openMenu}
+            onOpenCreate={() => setActiveScreen('online-create')}
+            onOpenJoin={() => setActiveScreen('online-join')}
+            flashMessage={onlineFlashMessage}
+            hasActiveSession={!!onlineSession}
+            onResumeLobby={() => setActiveScreen('online-room')}
+          />
+        )}
+
+        {activeScreen === 'online-create' && (
+          <OnlineCreateScreen
+            values={onlineForms}
+            isSubmitting={isSubmitting}
+            flashMessage={onlineFlashMessage}
+            onChange={updateOnlineForm}
+            onSubmit={handleCreateLobby}
+            onBack={openOnlineHome}
+          />
+        )}
+
+        {activeScreen === 'online-join' && (
+          <OnlineJoinScreen
+            values={onlineForms}
+            isSubmitting={isSubmitting}
+            flashMessage={onlineFlashMessage}
+            onChange={updateOnlineForm}
+            onSubmit={handleJoinLobby}
+            onBack={openOnlineHome}
+          />
+        )}
+
+        {activeScreen === 'online-room' && (
+          <OnlineRoomScreen
+            snapshot={onlineSnapshot}
+            selectedPiece={selectedOnlinePiece}
+            onSquareClick={handleOnlineSquareClick}
+            onHandPieceClick={handleOnlineHandPieceClick}
+            onBack={() => leaveOnlineLobby('menu')}
+            onRematch={handleOnlineRematch}
+            onCopyCode={handleCopyLobbyCode}
+            copyNotice={copyNotice}
+            socketStatus={socketStatus}
+            flashMessage={onlineFlashMessage}
+            getPawnDirection={getPawnDisplayDirection}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MenuScreen({
+  onPlayOverBoard,
+  onOpenRules,
+  onPlayOnline,
+  hasActiveSession,
+  onResumeOnline,
+}) {
+  return (
+    <div className="h-full w-full flex items-center justify-center overflow-hidden">
+      <div className="h-full w-full max-w-[900px]">
+        <section className="relative h-full overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 p-6 sm:p-8 lg:p-10 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 via-transparent to-blue-500/10 pointer-events-none" />
+          <div className="relative flex h-full min-h-0 flex-col justify-center">
+            <h1 className="text-center text-5xl sm:text-7xl lg:text-8xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-600 drop-shadow-lg">
+              TIC TAC CHEC
+            </h1>
+            <div className="mx-auto mt-5 max-w-2xl text-center">
+              <p className="text-[11px] sm:text-xs font-black uppercase tracking-[0.45em] text-cyan-300/90">
+                Chess Movement. Tic-Tac Pressure.
+              </p>
+              <p className="mt-4 text-base sm:text-lg lg:text-[1.22rem] leading-7 sm:leading-8 text-slate-100/92">
+                <span className="text-white font-semibold">A fast 4x4 battle</span> where every placement matters, every capture recycles momentum, and every turn pushes you closer to a four-piece line.
+              </p>
+              <p className="mt-2 text-sm sm:text-base leading-7 text-slate-300/80">
+                Drop pieces from your hand, maneuver for control, and now create a live code-based lobby for online play.
+              </p>
+            </div>
+
+            <div className="mx-auto mt-8 flex w-full max-w-2xl flex-col gap-3">
+              <MenuButton
+                title="Play Over the Board"
+                description="Start a local two-player match with the full gameboard experience."
+                tone="cyan"
+                onClick={onPlayOverBoard}
+              />
+              <MenuButton
+                title="Play Online"
+                description="Create a code-based lobby, share it, and play a live game backed by Cloudflare Durable Objects."
+                tone="blue"
+                onClick={onPlayOnline}
+              />
+              {hasActiveSession && (
+                <MenuButton
+                  title="Resume Online Lobby"
+                  description="Reconnect to the lobby from the last active browser session."
+                  tone="teal"
+                  onClick={onResumeOnline}
+                />
+              )}
+              <MenuButton
+                title="How to Play / Rules"
+                description="Learn what Tic Tac Chec is, how turns work, and how each piece helps you win."
+                tone="slate"
+                onClick={onOpenRules}
+              />
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function MenuButton({ title, description, tone, onClick }) {
+  const toneClasses = {
+    cyan: 'from-cyan-500 via-sky-500 to-blue-600 shadow-cyan-500/30',
+    slate: 'from-slate-700 via-slate-800 to-slate-900 shadow-slate-950/40',
+    blue: 'from-blue-600 via-indigo-600 to-sky-700 shadow-blue-600/30',
+    teal: 'from-teal-500 via-cyan-500 to-sky-600 shadow-teal-500/30',
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col items-center justify-center p-4 m-0 absolute inset-0 overflow-hidden">
-      {/* Title */}
-      <h1 className="text-6xl md:text-8xl font-black mb-4 md:mb-8 tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 drop-shadow-lg">
-        TIC TAC CHEC
-      </h1>
+    <button
+      onClick={onClick}
+      className={`group w-full rounded-[1.6rem] border border-white/10 bg-gradient-to-r ${toneClasses[tone]} p-[1px] text-left shadow-[0_18px_35px_rgba(15,23,42,0.35)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01]`}
+    >
+      <span className="flex w-full items-center justify-between gap-4 rounded-[1.5rem] bg-slate-950/90 px-6 py-5">
+        <span>
+          <span className="block text-lg sm:text-xl font-black uppercase tracking-[0.12em] text-white">
+            {title}
+          </span>
+          <span className="mt-2 block text-sm sm:text-base leading-6 text-slate-300/85">
+            {description}
+          </span>
+        </span>
+        <span className="text-2xl font-black text-cyan-300 transition-transform duration-300 group-hover:translate-x-1">
+          →
+        </span>
+      </span>
+    </button>
+  );
+}
 
-      {/* Turn Indicator */}
-      <div className="mb-8 md:mb-12">
-        <div className={`px-10 py-4 rounded-full font-black text-2xl tracking-widest uppercase shadow-2xl ${
-          currentTurn === 'white' 
-            ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-blue-500/50' 
-            : 'bg-gradient-to-r from-gray-700 to-gray-900 text-white shadow-gray-900/50'
-        } transition-all duration-500 ${currentTurn === 'white' ? 'animate-pulse' : ''}`}>
-          {winner ? `🏆 ${winner} WINS! 🏆` : `${currentTurn}'S TURN`}
-        </div>
-      </div>
-
-      {/* Main Game Layout - Centered and Fullscreen */}
-      <div className="flex flex-col md:flex-row gap-6 md:gap-16 items-center justify-center w-full max-w-[1400px] flex-1 pb-10">
-        
-        {/* Black Hand (Left) */}
-        <div className="flex-1 w-full max-w-[200px] md:max-w-[300px]">
-          <SidePanel 
-            title="BLACK'S HAND"
-            pieces={blackHand}
-            player="black"
-            isActive={currentTurn === 'black'}
-            selectedPiece={selectedPiece}
-            onPieceClick={handleHandPieceClick}
-          />
-        </div>
-
-        {/* Game Board */}
-        <div className="flex-shrink-0 z-10">
-          <div className="grid grid-cols-4 gap-0 bg-blue-950 p-6 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.8)] border-8 border-slate-700/50 relative overflow-hidden backdrop-blur-sm">
-            <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none mix-blend-overlay"></div>
-            {board.map((piece, index) => {
-              const row = Math.floor(index / 4);
-              const col = index % 4;
-              const isLight = (row + col) % 2 === 0;
-              const isSelected = selectedPiece?.from === index;
-              const pawnDirection = getPawnDisplayDirection(piece, index);
-
-              return (
-                <div
-                  key={index}
-                  onClick={() => handleSquareClick(index)}
-                  className={`
-                    w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 flex items-center justify-center cursor-pointer
-                    transition-all duration-300 relative
-                    ${isLight ? 'bg-slate-300' : 'bg-slate-600'}
-                    ${isSelected ? 'ring-[6px] ring-yellow-400 ring-inset scale-[0.92] shadow-inner z-20 rounded-md' : 'rounded-sm'}
-                    hover:brightness-125 hover:scale-[0.95] hover:z-10
-                  `}
-                >
-                  {piece && (
-                    <div className={`${isSelected ? 'scale-110' : 'scale-100'} transition-transform duration-300`}>
-                      <ChessPiece
-                        type={piece.type}
-                        player={piece.player}
-                        direction={pawnDirection}
-                      />
-                    </div>
-                  )}
-                  <span className="absolute bottom-1 right-2 text-[10px] text-black/40 font-mono select-none font-bold">
-                    {index}
-                  </span>
-                </div>
-              );
-            })}
+function RulesScreen({ onBack }) {
+  return (
+    <div className="h-full w-full flex items-center justify-center overflow-hidden">
+      <div className="flex h-full max-h-full w-full max-w-6xl flex-col justify-center rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 px-4 py-4 sm:px-6 sm:py-5 lg:px-7 lg:py-6 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl overflow-hidden">
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-start">
+            <ActionButton onClick={onBack} tone="slate">
+              ← Back To Menu
+            </ActionButton>
+          </div>
+          <div className="-mt-2 sm:-mt-3 flex justify-end text-right">
+            <h1 className="text-5xl sm:text-6xl lg:text-[4.2rem] font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">
+              How To Play
+            </h1>
           </div>
         </div>
 
-        {/* White Hand (Right) */}
-        <div className="flex-1 w-full max-w-[200px] md:max-w-[300px]">
-          <SidePanel 
-            title="WHITE'S HAND"
-            pieces={whiteHand}
-            player="white"
-            isActive={currentTurn === 'white'}
-            selectedPiece={selectedPiece}
-            onPieceClick={handleHandPieceClick}
-          />
+        <div className="mt-4 grid min-h-0 flex-1 gap-3 lg:grid-cols-[1.05fr_0.95fr] overflow-hidden">
+          <div className="grid gap-4 content-start">
+            {RULE_SECTIONS.map((section) => (
+              <div
+                key={section.title}
+                className="rounded-[1.35rem] border border-white/10 bg-slate-950/70 p-4 lg:p-5"
+              >
+                <h2 className="text-lg lg:text-xl font-black uppercase tracking-[0.14em] text-white">
+                  {section.title}
+                </h2>
+                <p className="mt-2 text-sm lg:text-[15px] leading-6 text-slate-300/85">
+                  {section.body}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-4 content-start">
+            <div className="rounded-[1.35rem] border border-white/10 bg-gradient-to-br from-slate-800/90 to-slate-950/90 p-4 lg:p-5">
+              <h2 className="text-lg lg:text-xl font-black uppercase tracking-[0.14em] text-white">
+                Piece Movements
+              </h2>
+              <ul className="mt-3 space-y-2 text-sm lg:text-[15px] leading-6 text-slate-300/85">
+                <li><span className="font-black text-white">Rook:</span> any distance horizontally or vertically.</li>
+                <li><span className="font-black text-white">Bishop:</span> any distance diagonally.</li>
+                <li><span className="font-black text-white">Knight:</span> L-shape jump, two plus one.</li>
+                <li><span className="font-black text-white">Pawn:</span> one step forward, diagonal captures, flips at the edge.</li>
+              </ul>
+            </div>
+
+            <div className="rounded-[1.35rem] border border-cyan-400/15 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 p-4 lg:p-5">
+              <h2 className="text-lg lg:text-xl font-black uppercase tracking-[0.14em] text-white">
+                Key Rules
+              </h2>
+              <ul className="mt-3 space-y-2 text-sm lg:text-[15px] leading-6 text-slate-200/85">
+                <li>Players place pieces from hand before moving them later.</li>
+                <li>Captured pieces return to the captured player&apos;s hand.</li>
+                <li>White always moves first.</li>
+                <li>Online rematches swap colors with the same opponent.</li>
+              </ul>
+            </div>
+
+            <div className="rounded-[1.35rem] border border-white/10 bg-slate-950/60 p-4 lg:p-5">
+              <h2 className="text-lg lg:text-xl font-black uppercase tracking-[0.14em] text-white">
+                Winning Mindset
+              </h2>
+              <p className="mt-2 text-sm lg:text-[15px] leading-6 text-slate-300/85">
+                The goal is not checkmate. Build board pressure, recycle captured pieces, and race to align four of your own color first.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Reset Button */}
-      <button
-        onClick={resetGame}
-        className="absolute bottom-8 px-12 py-5 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 
-                   rounded-full font-black text-xl text-white shadow-[0_10px_30px_rgba(220,38,38,0.4)] transition-all duration-300 
-                   hover:scale-110 active:scale-95 z-20 uppercase tracking-widest border-2 border-red-400/30"
+function OnlineHubScreen({
+  onBack,
+  onOpenCreate,
+  onOpenJoin,
+  flashMessage,
+  hasActiveSession,
+  onResumeLobby,
+}) {
+  return (
+    <CenterCard
+      title="Online Play"
+      eyebrow="Live Durable Object Rooms"
+      description="Create a code, share it with your opponent, and let the server run the official state for both players."
+      onBack={onBack}
+    >
+      <div className="grid gap-4">
+        <MenuButton
+          title="Create Lobby"
+          description="Pick your name, choose white, black, or random, and generate a shareable lobby code."
+          tone="cyan"
+          onClick={onOpenCreate}
+        />
+        <MenuButton
+          title="Join Lobby"
+          description="Enter a friend’s lobby code, add your name, and connect straight to the live match."
+          tone="blue"
+          onClick={onOpenJoin}
+        />
+        {hasActiveSession && (
+          <MenuButton
+            title="Resume Saved Lobby"
+            description="Reconnect with the saved session token from this browser."
+            tone="teal"
+            onClick={onResumeLobby}
+          />
+        )}
+      </div>
+      {flashMessage && (
+        <p className="mt-6 rounded-2xl border border-cyan-400/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-200/85">
+          {flashMessage}
+        </p>
+      )}
+    </CenterCard>
+  );
+}
+
+function OnlineCreateScreen({ values, isSubmitting, flashMessage, onChange, onSubmit, onBack }) {
+  return (
+    <CenterCard
+      title="Create Lobby"
+      eyebrow="Host The Match"
+      description="Your name is required, and your seat preference decides whether you start as white, black, or let the server randomize it."
+      onBack={onBack}
+    >
+      <form className="mt-6 space-y-5" onSubmit={onSubmit}>
+        <TextInput
+          label="Your Name"
+          value={values.createName}
+          onChange={(event) => onChange('createName', event.target.value)}
+          placeholder="Player 1"
+          autoFocus
+        />
+        <ColorChoicePicker
+          value={values.createColorChoice}
+          onChange={(value) => onChange('createColorChoice', value)}
+        />
+        {flashMessage && <InlineNotice message={flashMessage} />}
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+          <ActionButton onClick={onBack} tone="slate" type="button">
+            Cancel
+          </ActionButton>
+          <ActionButton tone="cyan" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating...' : 'Generate Lobby Code'}
+          </ActionButton>
+        </div>
+      </form>
+    </CenterCard>
+  );
+}
+
+function OnlineJoinScreen({ values, isSubmitting, flashMessage, onChange, onSubmit, onBack }) {
+  return (
+    <CenterCard
+      title="Join Lobby"
+      eyebrow="Enter The Code"
+      description="Add your name, paste the six-character lobby code, and connect as player two."
+      onBack={onBack}
+    >
+      <form className="mt-6 space-y-5" onSubmit={onSubmit}>
+        <TextInput
+          label="Your Name"
+          value={values.joinName}
+          onChange={(event) => onChange('joinName', event.target.value)}
+          placeholder="Player 2"
+          autoFocus
+        />
+        <TextInput
+          label="Lobby Code"
+          value={values.joinCode}
+          onChange={(event) => onChange('joinCode', event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+          placeholder="ABC123"
+          className="tracking-[0.45em] uppercase"
+        />
+        {flashMessage && <InlineNotice message={flashMessage} />}
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+          <ActionButton onClick={onBack} tone="slate" type="button">
+            Cancel
+          </ActionButton>
+          <ActionButton tone="cyan" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Joining...' : 'Join Game'}
+          </ActionButton>
+        </div>
+      </form>
+    </CenterCard>
+  );
+}
+
+function OnlineRoomScreen({
+  snapshot,
+  selectedPiece,
+  onSquareClick,
+  onHandPieceClick,
+  onBack,
+  onRematch,
+  onCopyCode,
+  copyNotice,
+  socketStatus,
+  flashMessage,
+  getPawnDirection,
+}) {
+  const waitingSummary = buildWaitingSummary(snapshot);
+
+  if (!snapshot || snapshot.phase === 'waiting') {
+    return (
+      <CenterCard
+        title="Lobby Ready"
+        eyebrow="Waiting Room"
+        description="Share the join code with player two. This room will stay attached to the same durable lobby instance."
+        onBack={onBack}
       >
-        🔄 Reset Game
-      </button>
+        <div className="mt-6 grid gap-4">
+          <LobbyCodeCard
+            code={snapshot?.lobbyCode || '......'}
+            onCopy={onCopyCode}
+            copyNotice={copyNotice}
+            socketStatus={socketStatus}
+          />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <InfoCard title="Seat Preference" value={waitingSummary.title} detail={waitingSummary.detail} />
+            <InfoCard
+              title="Players"
+              value={snapshot?.players?.host?.name || 'Connecting...'}
+              detail={snapshot?.players?.guest
+                ? `${snapshot.players.guest.name} joined and the match should start any second.`
+                : 'Opponent slot is still open.'}
+            />
+          </div>
+          {flashMessage && <InlineNotice message={flashMessage} />}
+        </div>
+      </CenterCard>
+    );
+  }
 
-      {/* Winner Modal */}
-      {winner && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center backdrop-blur-sm z-50 animate-fade-in">
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-12 rounded-3xl text-center 
-                          border-4 border-yellow-500 shadow-2xl transform scale-100 animate-bounce-in">
-            <h2 className="text-6xl font-black mb-6 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
-              {winner.toUpperCase()} WINS!
-            </h2>
-            <div className="text-8xl mb-8">🏆</div>
-            <button 
-              onClick={resetGame}
-              className="px-10 py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 
-                         rounded-full font-bold text-xl transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg"
-            >
-              Play Again
-            </button>
+  const canRequestRematch =
+    snapshot.phase === 'finished' &&
+    snapshot.closedReason !== 'disconnect_timeout' &&
+    snapshot.players.white &&
+    snapshot.players.black;
+  const yourRematchReady = snapshot.yourSeat
+    ? snapshot.rematch?.[snapshot.yourSeat === 'white' ? 'whiteReady' : 'blackReady']
+    : false;
+
+  return (
+    <GameScreen
+      board={snapshot.game.board}
+      currentTurn={snapshot.game.turn}
+      selectedPiece={selectedPiece}
+      winner={snapshot.game.winner}
+      blackHand={snapshot.game.hands.black}
+      whiteHand={snapshot.game.hands.white}
+      blackLabel={getOnlinePlayerLabel(snapshot, 'black')}
+      whiteLabel={getOnlinePlayerLabel(snapshot, 'white')}
+      topStatus={getOnlineStatusMessage(snapshot)}
+      onSquareClick={onSquareClick}
+      onHandPieceClick={onHandPieceClick}
+      onBack={onBack}
+      onPrimaryAction={canRequestRematch ? onRematch : null}
+      primaryActionLabel={canRequestRematch
+        ? yourRematchReady
+          ? 'Rematch Requested'
+          : 'Request Rematch'
+        : null}
+      primaryActionDisabled={!canRequestRematch || yourRematchReady}
+      getPawnDirection={getPawnDirection}
+      socketStatus={socketStatus}
+      copyCode={snapshot.lobbyCode}
+      onCopyCode={onCopyCode}
+      copyNotice={copyNotice}
+      bottomNotice={flashMessage}
+      rematchState={snapshot.rematch}
+    />
+  );
+}
+
+function CenterCard({ title, eyebrow, description, onBack, children }) {
+  return (
+    <div className="h-full w-full flex items-center justify-center overflow-hidden">
+      <div className="flex max-h-full w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/80 p-6 sm:p-8 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
+              {eyebrow}
+            </p>
+            <h1 className="mt-3 text-4xl sm:text-5xl font-black tracking-tight text-white">
+              {title}
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm sm:text-base leading-7 text-slate-300/85">
+              {description}
+            </p>
+          </div>
+          <ActionButton onClick={onBack} tone="slate">
+            ← Back
+          </ActionButton>
+        </div>
+        <div className="mt-4 min-h-0">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GameScreen({
+  board,
+  currentTurn,
+  selectedPiece,
+  winner,
+  blackHand,
+  whiteHand,
+  blackLabel,
+  whiteLabel,
+  topStatus,
+  onSquareClick,
+  onHandPieceClick,
+  onBack,
+  onPrimaryAction,
+  primaryActionLabel,
+  primaryActionDisabled = false,
+  getPawnDirection,
+  socketStatus,
+  copyCode,
+  onCopyCode,
+  copyNotice,
+  bottomNotice,
+  rematchState,
+}) {
+  const showRematchReadiness = Boolean(winner && rematchState);
+  const boardShellClassName = 'w-[19.6rem] sm:w-[31rem] md:w-[35rem] lg:w-[39rem]';
+
+  return (
+    <div className="h-full min-h-0 flex flex-col overflow-hidden">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1450px] flex-1 flex-col overflow-hidden">
+        <div className="mb-4 grid items-center gap-3 md:grid-cols-[1fr_auto_1fr]">
+          <div className="flex flex-wrap gap-3 justify-start">
+            <ActionButton onClick={onBack} tone="slate">
+              ← Back To Menu
+            </ActionButton>
+            {copyCode && onCopyCode && (
+              <ActionButton onClick={onCopyCode} tone="teal">
+                Copy Code
+              </ActionButton>
+            )}
+          </div>
+
+          <h1 className="text-center text-4xl sm:text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 drop-shadow-lg">
+            TIC TAC CHEC
+          </h1>
+
+          <div className="flex justify-start md:justify-end">
+            {socketStatus && (
+              <ConnectionBadge status={socketStatus} copyNotice={copyNotice} />
+            )}
           </div>
         </div>
+
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 pb-4 md:flex-row md:gap-6">
+          <div className="order-1 w-full flex-none md:order-none md:w-[260px] lg:w-[290px]">
+            <SidePanel
+              title={`${blackLabel}'s Hand`}
+              pieces={blackHand}
+              player="black"
+              isActive={currentTurn === 'black' && !winner}
+              selectedPiece={selectedPiece}
+              onPieceClick={onHandPieceClick}
+            />
+          </div>
+
+          <div className={`order-3 flex-shrink-0 z-10 md:order-none ${boardShellClassName}`}>
+            <div className="mb-2 flex w-full justify-center">
+              <div
+                className={`w-full rounded-full font-black uppercase text-center leading-tight shadow-xl transition-all duration-500 ${
+                  winner
+                    ? 'px-4 py-3 text-base sm:text-lg md:text-xl tracking-[0.14em] bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 text-slate-950 shadow-[0_0_35px_rgba(251,191,36,0.9)]'
+                    : currentTurn === 'white'
+                      ? 'px-4 py-2 text-[11px] sm:text-xs md:text-sm tracking-[0.2em] bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-blue-500/40'
+                      : 'px-4 py-2 text-[11px] sm:text-xs md:text-sm tracking-[0.2em] bg-gradient-to-r from-gray-700 to-gray-900 text-white shadow-gray-900/50'
+                }`}
+              >
+                {topStatus}
+              </div>
+            </div>
+
+            <div className="grid w-full grid-cols-4 gap-0 bg-blue-950 p-4 sm:p-6 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.8)] border-8 border-slate-700/50 relative overflow-hidden backdrop-blur-sm">
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none mix-blend-overlay" />
+              {board.map((piece, index) => {
+                const row = Math.floor(index / 4);
+                const col = index % 4;
+                const isLight = (row + col) % 2 === 0;
+                const isSelected = selectedPiece?.from === index;
+                const pawnDirection = getPawnDirection(piece, index);
+
+                return (
+                  <div
+                    key={index}
+                    onClick={() => onSquareClick(index)}
+                    className={`
+                      h-[4.15rem] w-[4.15rem] sm:h-24 sm:w-24 md:h-28 md:w-28 lg:h-32 lg:w-32 flex items-center justify-center cursor-pointer
+                      transition-all duration-300 relative
+                      ${isLight ? 'bg-slate-300' : 'bg-slate-600'}
+                      ${isSelected ? 'ring-[6px] ring-yellow-400 ring-inset scale-[0.92] shadow-inner z-20 rounded-md' : 'rounded-sm'}
+                      hover:brightness-125 hover:scale-[0.95] hover:z-10
+                    `}
+                  >
+                    {piece && (
+                      <div className={`${isSelected ? 'scale-110' : 'scale-100'} transition-transform duration-300`}>
+                        <ChessPiece
+                          type={piece.type}
+                          player={piece.player}
+                          direction={pawnDirection}
+                        />
+                      </div>
+                    )}
+                    <span className="absolute bottom-1 right-2 text-[10px] text-black/40 font-mono select-none font-bold">
+                      {index}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="order-2 w-full flex-none md:order-none md:w-[260px] lg:w-[290px]">
+            <SidePanel
+              title={`${whiteLabel}'s Hand`}
+              pieces={whiteHand}
+              player="white"
+              isActive={currentTurn === 'white' && !winner}
+              selectedPiece={selectedPiece}
+              onPieceClick={onHandPieceClick}
+            />
+          </div>
+        </div>
+
+        <BottomStatusBar
+          notice={bottomNotice}
+          primaryActionLabel={primaryActionLabel}
+          onPrimaryAction={onPrimaryAction}
+          primaryActionDisabled={primaryActionDisabled}
+          rematchState={showRematchReadiness ? rematchState : null}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BottomStatusBar({
+  notice,
+  primaryActionLabel,
+  onPrimaryAction,
+  primaryActionDisabled,
+  rematchState,
+}) {
+  if (!primaryActionLabel && !notice && !rematchState) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 rounded-[1.75rem] border border-white/10 bg-slate-950/75 px-4 py-3 shadow-[0_20px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-h-[1.5rem]">
+          {notice && (
+            <p className="text-sm sm:text-base font-semibold text-slate-100">
+              {notice}
+            </p>
+          )}
+          {rematchState && (
+            <p className={`text-xs uppercase tracking-[0.2em] text-slate-400 ${notice ? 'mt-1' : ''}`}>
+              Rematch readiness: {Number(rematchState.whiteReady) + Number(rematchState.blackReady)} / 2
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          {primaryActionLabel && onPrimaryAction && (
+            <ActionButton onClick={onPrimaryAction} tone="success" disabled={primaryActionDisabled}>
+              {primaryActionLabel}
+            </ActionButton>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LobbyCodeCard({ code, onCopy, copyNotice, socketStatus }) {
+  return (
+    <div className="rounded-[1.75rem] border border-cyan-400/20 bg-gradient-to-br from-slate-950/80 via-slate-900/80 to-cyan-950/40 p-6">
+      <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
+        Share This Lobby Code
+      </p>
+      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-4xl sm:text-5xl font-black tracking-[0.35em] text-white">
+          {code}
+        </p>
+        <ActionButton onClick={onCopy} tone="cyan">
+          Copy Code
+        </ActionButton>
+      </div>
+      <p className="mt-4 text-sm text-slate-300/85">
+        Socket status: <span className="font-semibold text-white">{socketStatus}</span>
+      </p>
+      {copyNotice && (
+        <p className="mt-2 text-sm text-cyan-200">
+          {copyNotice}
+        </p>
       )}
     </div>
   );
 }
 
-// Side Panel Component for Player's Hand
+function InfoCard({ title, value, detail }) {
+  return (
+    <div className="rounded-[1.35rem] border border-white/10 bg-slate-950/60 p-5">
+      <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-300/85">
+        {title}
+      </p>
+      <h2 className="mt-3 text-2xl font-black text-white">
+        {value}
+      </h2>
+      <p className="mt-3 text-sm leading-6 text-slate-300/85">
+        {detail}
+      </p>
+    </div>
+  );
+}
+
+function TextInput({ label, className = '', ...props }) {
+  return (
+    <label className="block">
+      <span className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300/90">
+        {label}
+      </span>
+      <input
+        {...props}
+        className={`mt-3 w-full rounded-2xl border border-white/10 bg-slate-950/85 px-5 py-4 text-base text-white outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/20 ${className}`}
+      />
+    </label>
+  );
+}
+
+function ColorChoicePicker({ value, onChange }) {
+  const options = [
+    { value: 'white', label: 'Start As White', detail: 'You get White and move first.' },
+    { value: 'black', label: 'Start As Black', detail: 'You get Black and your opponent moves first.' },
+    { value: 'random', label: 'Random Seat', detail: 'The server decides White and Black when player two joins.' },
+  ];
+
+  return (
+    <div>
+      <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300/90">
+        Color Preference
+      </p>
+      <div className="mt-3 grid gap-3">
+        {options.map((option) => {
+          const active = option.value === value;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              className={`rounded-2xl border px-5 py-4 text-left transition ${
+                active
+                  ? 'border-cyan-300/50 bg-cyan-400/10 shadow-[0_0_30px_rgba(34,211,238,0.12)]'
+                  : 'border-white/10 bg-slate-950/80 hover:border-white/25 hover:bg-white/5'
+              }`}
+            >
+              <span className="block text-base font-black text-white">
+                {option.label}
+              </span>
+              <span className="mt-1 block text-sm leading-6 text-slate-300/80">
+                {option.detail}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function InlineNotice({ message }) {
+  return (
+    <div className="rounded-2xl border border-cyan-400/20 bg-slate-950/75 px-4 py-3 text-sm text-slate-200/90">
+      {message}
+    </div>
+  );
+}
+
+function ConnectionBadge({ status, copyNotice }) {
+  const colorClasses = {
+    idle: 'border-slate-500/30 bg-slate-900/70 text-slate-200',
+    connecting: 'border-cyan-400/30 bg-cyan-500/10 text-cyan-100',
+    connected: 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100',
+    reconnecting: 'border-amber-400/30 bg-amber-500/10 text-amber-100',
+    error: 'border-red-400/30 bg-red-500/10 text-red-100',
+  };
+
+  return (
+    <div className={`rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.24em] ${colorClasses[status] || colorClasses.idle}`}>
+      {copyNotice || status}
+    </div>
+  );
+}
+
+function ActionButton({ children, onClick, tone = 'cyan', type = 'button', disabled = false }) {
+  const toneClasses = {
+    cyan: 'from-cyan-500 to-blue-600 shadow-cyan-500/30 border-cyan-300/30',
+    slate: 'from-slate-700 to-slate-900 shadow-slate-950/40 border-white/10',
+    success: 'from-green-600 to-emerald-700 shadow-green-600/35 border-green-300/20',
+    danger: 'from-red-600 to-rose-700 shadow-red-600/35 border-red-300/20',
+    teal: 'from-teal-500 to-cyan-600 shadow-teal-500/30 border-cyan-200/25',
+  };
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`rounded-full border-2 bg-gradient-to-r px-7 py-3 font-black uppercase tracking-[0.14em] text-white shadow-[0_10px_30px_rgba(15,23,42,0.4)] transition-all duration-300 ${disabled ? 'cursor-not-allowed opacity-50' : 'hover:scale-105 active:scale-95'} ${toneClasses[tone]}`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function SidePanel({ title, pieces, player, isActive, selectedPiece, onPieceClick }) {
   return (
-    <div className={`
-      bg-gradient-to-br ${player === 'white' ? 'from-indigo-900 to-blue-950' : 'from-slate-800 to-gray-900'}
-      p-6 rounded-2xl shadow-xl border-2 
-      ${isActive ? 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.3)]' : 'border-gray-700/50'}
-      transition-all duration-500 w-full min-h-[400px] flex flex-col justify-start
-    `}>
-      <h2 className="text-sm font-black uppercase tracking-[0.2em] mb-6 text-center text-gray-200 drop-shadow-md">
+    <div
+      className={`
+        bg-gradient-to-br ${player === 'white' ? 'from-indigo-900 to-blue-950' : 'from-slate-800 to-gray-900'}
+        p-4 lg:p-5 rounded-2xl shadow-xl border-2
+        ${isActive ? 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.3)]' : 'border-gray-700/50'}
+        transition-all duration-500 w-full h-[280px] md:h-[320px] lg:h-[360px] flex flex-col justify-start
+      `}
+    >
+      <h2 className="mb-4 text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-center text-gray-200 drop-shadow-md">
         {title}
       </h2>
-      <div className="flex flex-col gap-4 flex-1 justify-center">
+      <div className="flex flex-col gap-3 flex-1 justify-center">
         {pieces.map((type, index) => {
-          const isSelected = selectedPiece?.type === type && 
-                            selectedPiece?.player === player && 
-                            selectedPiece?.from === null;
-          
+          const isSelected =
+            selectedPiece?.type === type &&
+            selectedPiece?.player === player &&
+            selectedPiece?.from === null;
+          const defaultPawnDirection = type === 'pawn'
+            ? player === 'white' ? -1 : 1
+            : undefined;
+
           return (
             <div
               key={`${type}-${index}`}
               onClick={() => onPieceClick(type, player)}
               className={`
-                cursor-pointer transition-all duration-300 p-4 rounded-xl flex flex-col items-center
+                cursor-pointer transition-all duration-300 p-3 rounded-xl flex flex-col items-center
                 ${isSelected ? 'ring-4 ring-yellow-400 scale-105 bg-yellow-400/20 shadow-lg' : 'hover:bg-white/10 hover:shadow-md hover:scale-[1.02]'}
                 ${!isActive ? 'opacity-50 cursor-not-allowed grayscale-[0.5]' : ''}
               `}
             >
-              <div className="drop-shadow-lg scale-125 mb-1">
-                <ChessPiece type={type} player={player} />
+              <div className="drop-shadow-lg scale-110 sm:scale-125 mb-1">
+                <ChessPiece
+                  type={type}
+                  player={player}
+                  direction={defaultPawnDirection}
+                />
               </div>
-              <p className="text-xs tracking-wider text-center mt-3 uppercase font-bold text-gray-300 drop-shadow-sm">
+              <p className="mt-2 text-[11px] sm:text-xs tracking-wider text-center uppercase font-bold text-gray-300 drop-shadow-sm">
                 {type}
               </p>
             </div>

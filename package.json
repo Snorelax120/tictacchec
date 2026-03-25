@@ -1,0 +1,15 @@
+{
+  "name": "tictacchec",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm --prefix client run build",
+    "deploy": "npm run build && wrangler deploy",
+    "dev:client": "npm --prefix client run dev",
+    "dev:worker": "wrangler dev",
+    "preview:worker": "npm run build && wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.13.2"
+  }
+}

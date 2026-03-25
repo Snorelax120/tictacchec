@@ -19,6 +19,8 @@ logs/
 .env
 .env.local
 .env.*.local
+.dev.vars
+.dev.vars.*
 
 # OS files
 .DS_Store
@@ -47,6 +49,7 @@ coverage-final.json
 
 # Build artifacts
 dist/
+.wrangler/
 
 # Ignore test output
 /test-output/
