@@ -16,7 +16,7 @@ const icons = {
   pawn: faChessPawn,
 };
 
-const ChessPiece = ({ type, player, direction, className = "" }) => {
+const ChessPiece = ({ type, player, direction, className = '', iconClassName = '' }) => {
   const icon = icons[type];
   if (!icon) return null;
 
@@ -30,8 +30,7 @@ const ChessPiece = ({ type, player, direction, className = "" }) => {
     <div className={`relative inline-flex transition-all duration-300 hover:scale-125 cursor-pointer ${className}`}>
       <FontAwesomeIcon 
         icon={icon} 
-        className={`${colorClass}`}
-        size="4x"
+        className={`${colorClass} ${iconClassName}`}
       />
       {type === 'pawn' && arrowIcon && (
         <span

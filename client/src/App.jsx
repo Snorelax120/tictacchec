@@ -529,14 +529,25 @@ function App() {
   const localStatusMessage = localGame.winner
     ? `${getLocalPlayerLabel(localGame.winner)} wins the game.`
     : `${getLocalPlayerLabel(localGame.turn)} to move.`;
+  const isBoardScreen =
+    activeScreen === 'game-local' ||
+    (activeScreen === 'online-room' && onlineSnapshot && onlineSnapshot.phase !== 'waiting');
 
   return (
-    <div className="h-screen w-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden">
+    <div
+      className={`relative w-full overflow-x-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white ${
+        isBoardScreen ? 'h-screen overflow-hidden' : 'min-h-screen md:h-screen md:overflow-hidden'
+      }`}
+    >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.2),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.18),_transparent_30%)] pointer-events-none" />
       <div className="absolute left-[-10rem] top-20 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
       <div className="absolute right-[-8rem] bottom-10 h-72 w-72 rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
 
-      <div className="relative h-full w-full overflow-hidden px-3 py-3 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+      <div
+        className={`relative w-full px-3 py-3 sm:px-5 sm:py-5 lg:px-6 lg:py-6 ${
+          isBoardScreen ? 'h-full overflow-hidden' : 'min-h-screen md:h-full md:min-h-0 md:overflow-hidden'
+        }`}
+      >
         {activeScreen === 'menu' && (
           <MenuScreen
             onPlayOverBoard={startLocalGame}
@@ -566,6 +577,7 @@ function App() {
             onPrimaryAction={localGame.winner ? resetLocalGame : null}
             primaryActionLabel={localGame.winner ? 'Play Again' : null}
             getPawnDirection={getPawnDisplayDirection}
+            mobileHandPlayer={localGame.turn}
           />
         )}
 
@@ -630,27 +642,27 @@ function MenuScreen({
   onResumeOnline,
 }) {
   return (
-    <div className="h-full w-full flex items-center justify-center overflow-hidden">
-      <div className="h-full w-full max-w-[900px]">
-        <section className="relative h-full overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 p-6 sm:p-8 lg:p-10 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl">
+    <div className="flex w-full justify-center md:h-full md:items-center">
+      <div className="w-full max-w-[900px] md:h-full">
+        <section className="relative overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8 lg:p-10 md:h-full">
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 via-transparent to-blue-500/10 pointer-events-none" />
-          <div className="relative flex h-full min-h-0 flex-col justify-center">
-            <h1 className="text-center text-5xl sm:text-7xl lg:text-8xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-600 drop-shadow-lg">
+          <div className="relative flex flex-col justify-center py-3 md:h-full md:min-h-0 md:py-0">
+            <h1 className="text-center text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-600 drop-shadow-lg sm:text-7xl lg:text-8xl">
               TIC TAC CHEC
             </h1>
             <div className="mx-auto mt-5 max-w-2xl text-center">
-              <p className="text-[11px] sm:text-xs font-black uppercase tracking-[0.45em] text-cyan-300/90">
+              <p className="text-[10px] font-black uppercase tracking-[0.32em] text-cyan-300/90 sm:text-xs sm:tracking-[0.45em]">
                 Chess Movement. Tic-Tac Pressure.
               </p>
-              <p className="mt-4 text-base sm:text-lg lg:text-[1.22rem] leading-7 sm:leading-8 text-slate-100/92">
+              <p className="mt-4 text-sm leading-6 text-slate-100/92 sm:text-lg sm:leading-8 lg:text-[1.22rem]">
                 <span className="text-white font-semibold">A fast 4x4 battle</span> where every placement matters, every capture recycles momentum, and every turn pushes you closer to a four-piece line.
               </p>
-              <p className="mt-2 text-sm sm:text-base leading-7 text-slate-300/80">
+              <p className="mt-2 text-sm leading-6 text-slate-300/80 sm:text-base sm:leading-7">
                 Drop pieces from your hand, maneuver for control, and now create a live code-based lobby for online play.
               </p>
             </div>
 
-            <div className="mx-auto mt-8 flex w-full max-w-2xl flex-col gap-3">
+            <div className="mx-auto mt-7 flex w-full max-w-2xl flex-col gap-3 sm:mt-8">
               <MenuButton
                 title="Play Over the Board"
                 description="Start a local two-player match with the full gameboard experience."
@@ -698,16 +710,16 @@ function MenuButton({ title, description, tone, onClick }) {
       onClick={onClick}
       className={`group w-full rounded-[1.6rem] border border-white/10 bg-gradient-to-r ${toneClasses[tone]} p-[1px] text-left shadow-[0_18px_35px_rgba(15,23,42,0.35)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01]`}
     >
-      <span className="flex w-full items-center justify-between gap-4 rounded-[1.5rem] bg-slate-950/90 px-6 py-5">
+      <span className="flex w-full flex-col gap-3 rounded-[1.5rem] bg-slate-950/90 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-5">
         <span>
-          <span className="block text-lg sm:text-xl font-black uppercase tracking-[0.12em] text-white">
+          <span className="block text-base font-black uppercase tracking-[0.08em] text-white sm:text-xl sm:tracking-[0.12em]">
             {title}
           </span>
-          <span className="mt-2 block text-sm sm:text-base leading-6 text-slate-300/85">
+          <span className="mt-2 block text-sm leading-6 text-slate-300/85 sm:text-base">
             {description}
           </span>
         </span>
-        <span className="text-2xl font-black text-cyan-300 transition-transform duration-300 group-hover:translate-x-1">
+        <span className="self-end text-2xl font-black text-cyan-300 transition-transform duration-300 group-hover:translate-x-1 sm:self-auto">
           →
         </span>
       </span>
@@ -717,32 +729,32 @@ function MenuButton({ title, description, tone, onClick }) {
 
 function RulesScreen({ onBack }) {
   return (
-    <div className="h-full w-full flex items-center justify-center overflow-hidden">
-      <div className="flex h-full max-h-full w-full max-w-6xl flex-col justify-center rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 px-4 py-4 sm:px-6 sm:py-5 lg:px-7 lg:py-6 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl overflow-hidden">
+    <div className="flex w-full justify-center md:h-full md:items-center">
+      <div className="flex w-full max-w-6xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 px-4 py-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:px-6 sm:py-5 lg:px-7 lg:py-6 md:h-full md:max-h-full md:justify-center md:overflow-hidden">
         <div className="flex flex-col gap-3">
           <div className="flex justify-start">
-            <ActionButton onClick={onBack} tone="slate">
+            <ActionButton onClick={onBack} tone="slate" className="w-full sm:w-auto">
               ← Back To Menu
             </ActionButton>
           </div>
-          <div className="-mt-2 sm:-mt-3 flex justify-end text-right">
-            <h1 className="text-5xl sm:text-6xl lg:text-[4.2rem] font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">
+          <div className="flex justify-end pt-1 text-right sm:-mt-3">
+            <h1 className="text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 sm:text-6xl lg:text-[4.2rem]">
               How To Play
             </h1>
           </div>
         </div>
 
-        <div className="mt-4 grid min-h-0 flex-1 gap-3 lg:grid-cols-[1.05fr_0.95fr] overflow-hidden">
+        <div className="mt-4 grid gap-3 lg:grid-cols-[1.05fr_0.95fr] md:min-h-0 md:flex-1 md:overflow-auto">
           <div className="grid gap-4 content-start">
             {RULE_SECTIONS.map((section) => (
               <div
                 key={section.title}
                 className="rounded-[1.35rem] border border-white/10 bg-slate-950/70 p-4 lg:p-5"
               >
-                <h2 className="text-lg lg:text-xl font-black uppercase tracking-[0.14em] text-white">
+                <h2 className="text-base font-black uppercase tracking-[0.12em] text-white lg:text-xl lg:tracking-[0.14em]">
                   {section.title}
                 </h2>
-                <p className="mt-2 text-sm lg:text-[15px] leading-6 text-slate-300/85">
+                <p className="mt-2 text-sm leading-6 text-slate-300/85 lg:text-[15px]">
                   {section.body}
                 </p>
               </div>
@@ -751,10 +763,10 @@ function RulesScreen({ onBack }) {
 
           <div className="grid gap-4 content-start">
             <div className="rounded-[1.35rem] border border-white/10 bg-gradient-to-br from-slate-800/90 to-slate-950/90 p-4 lg:p-5">
-              <h2 className="text-lg lg:text-xl font-black uppercase tracking-[0.14em] text-white">
+              <h2 className="text-base font-black uppercase tracking-[0.12em] text-white lg:text-xl lg:tracking-[0.14em]">
                 Piece Movements
               </h2>
-              <ul className="mt-3 space-y-2 text-sm lg:text-[15px] leading-6 text-slate-300/85">
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-300/85 lg:text-[15px]">
                 <li><span className="font-black text-white">Rook:</span> any distance horizontally or vertically.</li>
                 <li><span className="font-black text-white">Bishop:</span> any distance diagonally.</li>
                 <li><span className="font-black text-white">Knight:</span> L-shape jump, two plus one.</li>
@@ -763,10 +775,10 @@ function RulesScreen({ onBack }) {
             </div>
 
             <div className="rounded-[1.35rem] border border-cyan-400/15 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 p-4 lg:p-5">
-              <h2 className="text-lg lg:text-xl font-black uppercase tracking-[0.14em] text-white">
+              <h2 className="text-base font-black uppercase tracking-[0.12em] text-white lg:text-xl lg:tracking-[0.14em]">
                 Key Rules
               </h2>
-              <ul className="mt-3 space-y-2 text-sm lg:text-[15px] leading-6 text-slate-200/85">
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-200/85 lg:text-[15px]">
                 <li>Players place pieces from hand before moving them later.</li>
                 <li>Captured pieces return to the captured player&apos;s hand.</li>
                 <li>White always moves first.</li>
@@ -775,10 +787,10 @@ function RulesScreen({ onBack }) {
             </div>
 
             <div className="rounded-[1.35rem] border border-white/10 bg-slate-950/60 p-4 lg:p-5">
-              <h2 className="text-lg lg:text-xl font-black uppercase tracking-[0.14em] text-white">
+              <h2 className="text-base font-black uppercase tracking-[0.12em] text-white lg:text-xl lg:tracking-[0.14em]">
                 Winning Mindset
               </h2>
-              <p className="mt-2 text-sm lg:text-[15px] leading-6 text-slate-300/85">
+              <p className="mt-2 text-sm leading-6 text-slate-300/85 lg:text-[15px]">
                 The goal is not checkmate. Build board pressure, recycle captured pieces, and race to align four of your own color first.
               </p>
             </div>
@@ -857,10 +869,10 @@ function OnlineCreateScreen({ values, isSubmitting, flashMessage, onChange, onSu
         />
         {flashMessage && <InlineNotice message={flashMessage} />}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-          <ActionButton onClick={onBack} tone="slate" type="button">
+          <ActionButton onClick={onBack} tone="slate" type="button" className="w-full sm:w-auto">
             Cancel
           </ActionButton>
-          <ActionButton tone="cyan" type="submit" disabled={isSubmitting}>
+          <ActionButton tone="cyan" type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
             {isSubmitting ? 'Creating...' : 'Generate Lobby Code'}
           </ActionButton>
         </div>
@@ -894,10 +906,10 @@ function OnlineJoinScreen({ values, isSubmitting, flashMessage, onChange, onSubm
         />
         {flashMessage && <InlineNotice message={flashMessage} />}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-          <ActionButton onClick={onBack} tone="slate" type="button">
+          <ActionButton onClick={onBack} tone="slate" type="button" className="w-full sm:w-auto">
             Cancel
           </ActionButton>
-          <ActionButton tone="cyan" type="submit" disabled={isSubmitting}>
+          <ActionButton tone="cyan" type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
             {isSubmitting ? 'Joining...' : 'Join Game'}
           </ActionButton>
         </div>
@@ -989,27 +1001,28 @@ function OnlineRoomScreen({
       copyNotice={copyNotice}
       bottomNotice={flashMessage}
       rematchState={snapshot.rematch}
+      mobileHandPlayer={snapshot.yourSeat || null}
     />
   );
 }
 
 function CenterCard({ title, eyebrow, description, onBack, children }) {
   return (
-    <div className="h-full w-full flex items-center justify-center overflow-hidden">
-      <div className="flex max-h-full w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/80 p-6 sm:p-8 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl">
+    <div className="flex w-full justify-center md:h-full md:items-center">
+      <div className="flex w-full max-w-4xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-900/80 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8 md:max-h-full md:overflow-auto">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
               {eyebrow}
             </p>
-            <h1 className="mt-3 text-4xl sm:text-5xl font-black tracking-tight text-white">
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-5xl">
               {title}
             </h1>
-            <p className="mt-4 max-w-2xl text-sm sm:text-base leading-7 text-slate-300/85">
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300/85 sm:text-base sm:leading-7">
               {description}
             </p>
           </div>
-          <ActionButton onClick={onBack} tone="slate">
+          <ActionButton onClick={onBack} tone="slate" className="w-full sm:w-auto">
             ← Back
           </ActionButton>
         </div>
@@ -1044,39 +1057,111 @@ function GameScreen({
   copyNotice,
   bottomNotice,
   rematchState,
+  mobileHandPlayer = null,
 }) {
   const showRematchReadiness = Boolean(winner && rematchState);
-  const boardShellClassName = 'w-[19.6rem] sm:w-[31rem] md:w-[35rem] lg:w-[39rem]';
+  const boardShellClassName = 'w-full max-w-[21rem] sm:max-w-[24rem] md:w-[35rem] md:max-w-[35rem] lg:w-[39rem] lg:max-w-[39rem]';
+  const mobileBottomHandLabel = mobileHandPlayer === 'white'
+    ? whiteLabel
+    : mobileHandPlayer === 'black'
+      ? blackLabel
+      : '';
+  const mobileBottomHandPieces = mobileHandPlayer === 'white'
+    ? whiteHand
+    : mobileHandPlayer === 'black'
+      ? blackHand
+      : [];
+  const mobileOpponentPlayer = mobileHandPlayer === 'white'
+    ? 'black'
+    : mobileHandPlayer === 'black'
+      ? 'white'
+      : null;
+  const mobileTopHandLabel = mobileOpponentPlayer === 'white'
+    ? whiteLabel
+    : mobileOpponentPlayer === 'black'
+      ? blackLabel
+      : '';
+  const mobileTopHandPieces = mobileOpponentPlayer === 'white'
+    ? whiteHand
+    : mobileOpponentPlayer === 'black'
+      ? blackHand
+      : [];
+  const showMobileHands = Boolean(mobileHandPlayer);
+  const mobileBottomHandIsActive = mobileHandPlayer === currentTurn && !winner;
+  const mobileTopHandIsActive = mobileOpponentPlayer === currentTurn && !winner;
 
   return (
-    <div className="h-full min-h-0 flex flex-col overflow-hidden">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1450px] flex-1 flex-col overflow-hidden">
-        <div className="mb-4 grid items-center gap-3 md:grid-cols-[1fr_auto_1fr]">
-          <div className="flex flex-wrap gap-3 justify-start">
-            <ActionButton onClick={onBack} tone="slate">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="mx-auto flex h-full w-full max-w-[1450px] min-h-0 flex-1 flex-col gap-2 md:gap-4">
+        <div className="md:hidden">
+          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
+            <ActionButton
+              onClick={onBack}
+              tone="slate"
+              className="justify-self-start px-3 py-2 text-[10px] tracking-[0.1em] sm:px-4 sm:py-2.5 sm:text-xs"
+            >
+              ← Menu
+            </ActionButton>
+            <h1 className="text-center text-[1.65rem] font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 drop-shadow-lg sm:text-4xl">
+              TIC TAC CHEC
+            </h1>
+            {copyCode && onCopyCode ? (
+              <ActionButton
+                onClick={onCopyCode}
+                tone="teal"
+                className="justify-self-end px-3 py-2 text-[10px] tracking-[0.1em] sm:px-4 sm:py-2.5 sm:text-xs"
+              >
+                Copy
+              </ActionButton>
+            ) : (
+              <div />
+            )}
+          </div>
+          {socketStatus && (
+            <div className="mt-2 flex justify-center">
+              <ConnectionBadge status={socketStatus} copyNotice={copyNotice} />
+            </div>
+          )}
+        </div>
+
+        <div className="hidden md:grid md:mb-4 md:grid-cols-[1fr_auto_1fr] md:items-center md:gap-3">
+          <div className="flex flex-wrap justify-start gap-2 sm:gap-3">
+            <ActionButton onClick={onBack} tone="slate" className="w-full sm:w-auto">
               ← Back To Menu
             </ActionButton>
             {copyCode && onCopyCode && (
-              <ActionButton onClick={onCopyCode} tone="teal">
+              <ActionButton onClick={onCopyCode} tone="teal" className="w-full sm:w-auto">
                 Copy Code
               </ActionButton>
             )}
           </div>
 
-          <h1 className="text-center text-4xl sm:text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 drop-shadow-lg">
+          <h1 className="text-center text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 drop-shadow-lg md:text-6xl">
             TIC TAC CHEC
           </h1>
 
-          <div className="flex justify-start md:justify-end">
-            {socketStatus && (
-              <ConnectionBadge status={socketStatus} copyNotice={copyNotice} />
-            )}
+          <div className="flex justify-end">
+            {socketStatus && <ConnectionBadge status={socketStatus} copyNotice={copyNotice} />}
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 pb-4 md:flex-row md:gap-6">
-          <div className="order-1 w-full flex-none md:order-none md:w-[260px] lg:w-[290px]">
-            <SidePanel
+        <div className="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-hidden pb-2 md:flex-row md:justify-center md:gap-6 md:pb-4">
+          {showMobileHands && (
+            <div className="w-full md:hidden">
+              <HandDisplay
+                layout="tray"
+                title={`${mobileTopHandLabel}'s Hand`}
+                pieces={mobileTopHandPieces}
+                player={mobileOpponentPlayer}
+                isActive={mobileTopHandIsActive}
+                selectedPiece={selectedPiece}
+                onPieceClick={onHandPieceClick}
+              />
+            </div>
+          )}
+
+          <div className="hidden w-full flex-none md:block md:w-[260px] lg:w-[290px]">
+            <HandDisplay
               title={`${blackLabel}'s Hand`}
               pieces={blackHand}
               player="black"
@@ -1086,22 +1171,22 @@ function GameScreen({
             />
           </div>
 
-          <div className={`order-3 flex-shrink-0 z-10 md:order-none ${boardShellClassName}`}>
-            <div className="mb-2 flex w-full justify-center">
+          <div className={`z-10 w-full flex-shrink-0 ${boardShellClassName}`}>
+            <div className="mb-1.5 flex w-full justify-center sm:mb-2">
               <div
                 className={`w-full rounded-full font-black uppercase text-center leading-tight shadow-xl transition-all duration-500 ${
                   winner
-                    ? 'px-4 py-3 text-base sm:text-lg md:text-xl tracking-[0.14em] bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 text-slate-950 shadow-[0_0_35px_rgba(251,191,36,0.9)]'
+                    ? 'bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 px-3 py-2 text-xs tracking-[0.1em] text-slate-950 shadow-[0_0_35px_rgba(251,191,36,0.9)] sm:px-4 sm:py-2.5 sm:text-base md:text-xl'
                     : currentTurn === 'white'
-                      ? 'px-4 py-2 text-[11px] sm:text-xs md:text-sm tracking-[0.2em] bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-blue-500/40'
-                      : 'px-4 py-2 text-[11px] sm:text-xs md:text-sm tracking-[0.2em] bg-gradient-to-r from-gray-700 to-gray-900 text-white shadow-gray-900/50'
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-1.5 text-[9px] tracking-[0.12em] text-white shadow-blue-500/40 sm:px-4 sm:py-2 sm:text-[11px] md:text-sm md:tracking-[0.2em]'
+                      : 'bg-gradient-to-r from-gray-700 to-gray-900 px-3 py-1.5 text-[9px] tracking-[0.12em] text-white shadow-gray-900/50 sm:px-4 sm:py-2 sm:text-[11px] md:text-sm md:tracking-[0.2em]'
                 }`}
               >
                 {topStatus}
               </div>
             </div>
 
-            <div className="grid w-full grid-cols-4 gap-0 bg-blue-950 p-4 sm:p-6 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.8)] border-8 border-slate-700/50 relative overflow-hidden backdrop-blur-sm">
+            <div className="relative grid w-full grid-cols-4 gap-0 overflow-hidden rounded-[1.2rem] border-4 border-slate-700/50 bg-blue-950 p-2 shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-sm sm:rounded-[1.4rem] sm:border-[5px] sm:p-2.5 md:rounded-3xl md:border-8 md:p-6">
               <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none mix-blend-overlay" />
               {board.map((piece, index) => {
                 const row = Math.floor(index / 4);
@@ -1115,23 +1200,23 @@ function GameScreen({
                     key={index}
                     onClick={() => onSquareClick(index)}
                     className={`
-                      h-[4.15rem] w-[4.15rem] sm:h-24 sm:w-24 md:h-28 md:w-28 lg:h-32 lg:w-32 flex items-center justify-center cursor-pointer
-                      transition-all duration-300 relative
+                      relative flex aspect-square w-full cursor-pointer items-center justify-center transition-all duration-300
                       ${isLight ? 'bg-slate-300' : 'bg-slate-600'}
-                      ${isSelected ? 'ring-[6px] ring-yellow-400 ring-inset scale-[0.92] shadow-inner z-20 rounded-md' : 'rounded-sm'}
+                      ${isSelected ? 'z-20 scale-[0.92] rounded-md ring-[3px] ring-inset ring-yellow-400 shadow-inner sm:ring-[4px] md:ring-[6px]' : 'rounded-[0.18rem] sm:rounded-[0.2rem] md:rounded-sm'}
                       hover:brightness-125 hover:scale-[0.95] hover:z-10
                     `}
                   >
                     {piece && (
-                      <div className={`${isSelected ? 'scale-110' : 'scale-100'} transition-transform duration-300`}>
+                      <div className={`${isSelected ? 'scale-105 sm:scale-110' : 'scale-[0.78] sm:scale-[0.86] md:scale-100'} transition-transform duration-300`}>
                         <ChessPiece
                           type={piece.type}
                           player={piece.player}
                           direction={pawnDirection}
+                          iconClassName="text-[1.95rem] sm:text-[2.45rem] md:text-[3.75rem]"
                         />
                       </div>
                     )}
-                    <span className="absolute bottom-1 right-2 text-[10px] text-black/40 font-mono select-none font-bold">
+                    <span className="absolute bottom-0.5 right-1 text-[8px] font-bold text-black/40 select-none font-mono sm:text-[9px] md:bottom-1 md:right-2 md:text-[10px]">
                       {index}
                     </span>
                   </div>
@@ -1140,8 +1225,22 @@ function GameScreen({
             </div>
           </div>
 
-          <div className="order-2 w-full flex-none md:order-none md:w-[260px] lg:w-[290px]">
-            <SidePanel
+          {showMobileHands && (
+            <div className="w-full md:hidden">
+              <HandDisplay
+                layout="tray"
+                title={`${mobileBottomHandLabel}'s Hand`}
+                pieces={mobileBottomHandPieces}
+                player={mobileHandPlayer}
+                isActive={mobileBottomHandIsActive}
+                selectedPiece={selectedPiece}
+                onPieceClick={onHandPieceClick}
+              />
+            </div>
+          )}
+
+          <div className="hidden w-full flex-none md:block md:w-[260px] lg:w-[290px]">
+            <HandDisplay
               title={`${whiteLabel}'s Hand`}
               pieces={whiteHand}
               player="white"
@@ -1176,23 +1275,28 @@ function BottomStatusBar({
   }
 
   return (
-    <div className="mt-4 rounded-[1.75rem] border border-white/10 bg-slate-950/75 px-4 py-3 shadow-[0_20px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl">
+    <div className="mt-2 rounded-[1.35rem] border border-white/10 bg-slate-950/75 px-3 py-2.5 shadow-[0_20px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:mt-4 sm:rounded-[1.75rem] sm:px-4 sm:py-3">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-h-[1.5rem]">
           {notice && (
-            <p className="text-sm sm:text-base font-semibold text-slate-100">
+            <p className="text-xs font-semibold text-slate-100 sm:text-base">
               {notice}
             </p>
           )}
           {rematchState && (
-            <p className={`text-xs uppercase tracking-[0.2em] text-slate-400 ${notice ? 'mt-1' : ''}`}>
+            <p className={`text-[10px] uppercase tracking-[0.16em] text-slate-400 sm:text-xs sm:tracking-[0.2em] ${notice ? 'mt-1' : ''}`}>
               Rematch readiness: {Number(rematchState.whiteReady) + Number(rematchState.blackReady)} / 2
             </p>
           )}
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
           {primaryActionLabel && onPrimaryAction && (
-            <ActionButton onClick={onPrimaryAction} tone="success" disabled={primaryActionDisabled}>
+            <ActionButton
+              onClick={onPrimaryAction}
+              tone="success"
+              disabled={primaryActionDisabled}
+              className="w-full sm:w-auto"
+            >
               {primaryActionLabel}
             </ActionButton>
           )}
@@ -1204,15 +1308,15 @@ function BottomStatusBar({
 
 function LobbyCodeCard({ code, onCopy, copyNotice, socketStatus }) {
   return (
-    <div className="rounded-[1.75rem] border border-cyan-400/20 bg-gradient-to-br from-slate-950/80 via-slate-900/80 to-cyan-950/40 p-6">
+    <div className="rounded-[1.75rem] border border-cyan-400/20 bg-gradient-to-br from-slate-950/80 via-slate-900/80 to-cyan-950/40 p-4 sm:p-6">
       <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
         Share This Lobby Code
       </p>
       <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-4xl sm:text-5xl font-black tracking-[0.35em] text-white">
+        <p className="break-all text-3xl font-black tracking-[0.22em] text-white sm:text-5xl sm:tracking-[0.35em]">
           {code}
         </p>
-        <ActionButton onClick={onCopy} tone="cyan">
+        <ActionButton onClick={onCopy} tone="cyan" className="w-full sm:w-auto">
           Copy Code
         </ActionButton>
       </div>
@@ -1230,11 +1334,11 @@ function LobbyCodeCard({ code, onCopy, copyNotice, socketStatus }) {
 
 function InfoCard({ title, value, detail }) {
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-slate-950/60 p-5">
+    <div className="rounded-[1.35rem] border border-white/10 bg-slate-950/60 p-4 sm:p-5">
       <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-300/85">
         {title}
       </p>
-      <h2 className="mt-3 text-2xl font-black text-white">
+      <h2 className="mt-3 break-words text-xl font-black text-white sm:text-2xl">
         {value}
       </h2>
       <p className="mt-3 text-sm leading-6 text-slate-300/85">
@@ -1317,13 +1421,13 @@ function ConnectionBadge({ status, copyNotice }) {
   };
 
   return (
-    <div className={`rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.24em] ${colorClasses[status] || colorClasses.idle}`}>
+    <div className={`max-w-full rounded-full border px-4 py-2 text-center text-[10px] font-black uppercase tracking-[0.2em] sm:text-xs sm:tracking-[0.24em] ${colorClasses[status] || colorClasses.idle}`}>
       {copyNotice || status}
     </div>
   );
 }
 
-function ActionButton({ children, onClick, tone = 'cyan', type = 'button', disabled = false }) {
+function ActionButton({ children, onClick, tone = 'cyan', type = 'button', disabled = false, className = '' }) {
   const toneClasses = {
     cyan: 'from-cyan-500 to-blue-600 shadow-cyan-500/30 border-cyan-300/30',
     slate: 'from-slate-700 to-slate-900 shadow-slate-950/40 border-white/10',
@@ -1337,57 +1441,99 @@ function ActionButton({ children, onClick, tone = 'cyan', type = 'button', disab
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-full border-2 bg-gradient-to-r px-7 py-3 font-black uppercase tracking-[0.14em] text-white shadow-[0_10px_30px_rgba(15,23,42,0.4)] transition-all duration-300 ${disabled ? 'cursor-not-allowed opacity-50' : 'hover:scale-105 active:scale-95'} ${toneClasses[tone]}`}
+      className={`inline-flex items-center justify-center rounded-full border-2 bg-gradient-to-r px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white shadow-[0_10px_30px_rgba(15,23,42,0.4)] transition-all duration-300 sm:px-7 sm:text-base sm:tracking-[0.14em] ${disabled ? 'cursor-not-allowed opacity-50' : 'hover:scale-105 active:scale-95'} ${toneClasses[tone]} ${className}`}
     >
       {children}
     </button>
   );
 }
 
-function SidePanel({ title, pieces, player, isActive, selectedPiece, onPieceClick }) {
+function HandDisplay({
+  title,
+  pieces,
+  player,
+  isActive,
+  selectedPiece,
+  onPieceClick,
+  layout = 'panel',
+}) {
+  if (layout === 'tray') {
+    return (
+      <div
+        className={`
+          rounded-[1.15rem] border-2 bg-gradient-to-br p-2.5 shadow-xl sm:rounded-[1.35rem] sm:p-3
+          ${player === 'white' ? 'from-indigo-900 to-blue-950' : 'from-slate-800 to-gray-900'}
+          ${isActive ? 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.2)]' : 'border-gray-700/50'}
+        `}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-100 drop-shadow-md sm:text-xs sm:tracking-[0.18em]">
+            {title}
+          </h2>
+          <span className={`text-[9px] font-black uppercase tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em] ${isActive ? 'text-yellow-300' : 'text-gray-400'}`}>
+            {isActive ? 'Ready' : 'Standby'}
+          </span>
+        </div>
+        {pieces.length > 0 ? (
+          <div className="-mx-1 mt-2 overflow-x-auto pb-1 sm:mt-3">
+            <div className="flex min-w-max gap-1.5 px-1 sm:gap-2">
+              {pieces.map((type, index) => {
+                const isSelected =
+                  selectedPiece?.type === type &&
+                  selectedPiece?.player === player &&
+                  selectedPiece?.from === null;
+
+                return (
+                  <HandPieceButton
+                    key={`${type}-${index}`}
+                    type={type}
+                    player={player}
+                    isActive={isActive}
+                    isSelected={isSelected}
+                    onPieceClick={onPieceClick}
+                    layout="tray"
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <p className="py-4 text-center text-sm italic text-gray-500">
+            No pieces left
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`
-        bg-gradient-to-br ${player === 'white' ? 'from-indigo-900 to-blue-950' : 'from-slate-800 to-gray-900'}
-        p-4 lg:p-5 rounded-2xl shadow-xl border-2
+        rounded-2xl border-2 bg-gradient-to-br p-4 shadow-xl transition-all duration-500 lg:p-5
+        ${player === 'white' ? 'from-indigo-900 to-blue-950' : 'from-slate-800 to-gray-900'}
         ${isActive ? 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.3)]' : 'border-gray-700/50'}
-        transition-all duration-500 w-full h-[280px] md:h-[320px] lg:h-[360px] flex flex-col justify-start
+        flex h-[460px] w-full flex-col justify-start md:h-[520px] lg:h-[560px]
       `}
     >
       <h2 className="mb-4 text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-center text-gray-200 drop-shadow-md">
         {title}
       </h2>
-      <div className="flex flex-col gap-3 flex-1 justify-center">
+      <div className="flex flex-col gap-2 flex-1 justify-start pt-1">
         {pieces.map((type, index) => {
           const isSelected =
             selectedPiece?.type === type &&
             selectedPiece?.player === player &&
             selectedPiece?.from === null;
-          const defaultPawnDirection = type === 'pawn'
-            ? player === 'white' ? -1 : 1
-            : undefined;
 
           return (
-            <div
+            <HandPieceButton
               key={`${type}-${index}`}
-              onClick={() => onPieceClick(type, player)}
-              className={`
-                cursor-pointer transition-all duration-300 p-3 rounded-xl flex flex-col items-center
-                ${isSelected ? 'ring-4 ring-yellow-400 scale-105 bg-yellow-400/20 shadow-lg' : 'hover:bg-white/10 hover:shadow-md hover:scale-[1.02]'}
-                ${!isActive ? 'opacity-50 cursor-not-allowed grayscale-[0.5]' : ''}
-              `}
-            >
-              <div className="drop-shadow-lg scale-110 sm:scale-125 mb-1">
-                <ChessPiece
-                  type={type}
-                  player={player}
-                  direction={defaultPawnDirection}
-                />
-              </div>
-              <p className="mt-2 text-[11px] sm:text-xs tracking-wider text-center uppercase font-bold text-gray-300 drop-shadow-sm">
-                {type}
-              </p>
-            </div>
+              type={type}
+              player={player}
+              isActive={isActive}
+              isSelected={isSelected}
+              onPieceClick={onPieceClick}
+            />
           );
         })}
       </div>
@@ -1397,6 +1543,58 @@ function SidePanel({ title, pieces, player, isActive, selectedPiece, onPieceClic
         </p>
       )}
     </div>
+  );
+}
+
+function HandPieceButton({
+  type,
+  player,
+  isActive,
+  isSelected,
+  onPieceClick,
+  layout = 'panel',
+}) {
+  const defaultPawnDirection = type === 'pawn'
+    ? player === 'white' ? -1 : 1
+    : undefined;
+  const isTray = layout === 'tray';
+  const baseClasses = isTray
+    ? 'min-w-[4.35rem] rounded-xl px-2.5 py-2 sm:min-w-[5.25rem] sm:px-3 sm:py-2.5'
+    : 'rounded-xl px-3 py-2';
+  const pieceScaleClasses = isTray
+    ? 'mb-1 drop-shadow-lg'
+    : 'mb-1 drop-shadow-lg scale-110 sm:scale-125';
+  const pieceIconClassName = isTray
+    ? 'text-[1.55rem] sm:text-[1.95rem]'
+    : 'text-[2.35rem] sm:text-[3.05rem]';
+  const labelClasses = isTray
+    ? 'mt-1 text-[9px] tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em]'
+    : 'mt-2 text-[11px] sm:text-xs tracking-wider';
+
+  return (
+    <button
+      type="button"
+      onClick={() => onPieceClick(type, player)}
+      disabled={!isActive}
+      className={`
+        ${baseClasses}
+        flex flex-col items-center transition-all duration-300
+        ${isSelected ? 'scale-105 bg-yellow-400/20 ring-4 ring-yellow-400 shadow-lg' : 'hover:scale-[1.02] hover:bg-white/10 hover:shadow-md'}
+        ${!isActive ? 'cursor-not-allowed opacity-50 grayscale-[0.5]' : 'cursor-pointer'}
+      `}
+    >
+      <div className={pieceScaleClasses}>
+        <ChessPiece
+          type={type}
+          player={player}
+          direction={defaultPawnDirection}
+          iconClassName={pieceIconClassName}
+        />
+      </div>
+      <p className={`${labelClasses} text-center font-bold uppercase text-gray-300 drop-shadow-sm`}>
+        {type}
+      </p>
+    </button>
   );
 }
 
