@@ -529,25 +529,14 @@ function App() {
   const localStatusMessage = localGame.winner
     ? `${getLocalPlayerLabel(localGame.winner)} wins the game.`
     : `${getLocalPlayerLabel(localGame.turn)} to move.`;
-  const isBoardScreen =
-    activeScreen === 'game-local' ||
-    (activeScreen === 'online-room' && onlineSnapshot && onlineSnapshot.phase !== 'waiting');
 
   return (
-    <div
-      className={`relative w-full overflow-x-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white ${
-        isBoardScreen ? 'h-screen overflow-hidden' : 'min-h-screen md:h-screen md:overflow-hidden'
-      }`}
-    >
+    <div className="app-shell relative w-full overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.2),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.18),_transparent_30%)] pointer-events-none" />
       <div className="absolute left-[-10rem] top-20 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
       <div className="absolute right-[-8rem] bottom-10 h-72 w-72 rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
 
-      <div
-        className={`relative w-full px-3 py-3 sm:px-5 sm:py-5 lg:px-6 lg:py-6 ${
-          isBoardScreen ? 'h-full overflow-hidden' : 'min-h-screen md:h-full md:min-h-0 md:overflow-hidden'
-        }`}
-      >
+      <div className="app-safe-shell relative flex h-full min-h-0 w-full overflow-hidden">
         {activeScreen === 'menu' && (
           <MenuScreen
             onPlayOverBoard={startLocalGame}
@@ -642,27 +631,27 @@ function MenuScreen({
   onResumeOnline,
 }) {
   return (
-    <div className="flex w-full justify-center md:h-full md:items-center">
-      <div className="w-full max-w-[900px] md:h-full">
-        <section className="relative overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8 lg:p-10 md:h-full">
+    <div className="flex h-full min-h-0 w-full justify-center">
+      <div className="flex h-full min-h-0 w-full max-w-[900px]">
+        <section className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8 lg:p-10">
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 via-transparent to-blue-500/10 pointer-events-none" />
-          <div className="relative flex flex-col justify-center py-3 md:h-full md:min-h-0 md:py-0">
-            <h1 className="text-center text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-600 drop-shadow-lg sm:text-7xl lg:text-8xl">
-              TIC TAC CHEC
-            </h1>
-            <div className="mx-auto mt-5 max-w-2xl text-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.32em] text-cyan-300/90 sm:text-xs sm:tracking-[0.45em]">
+          <div className="relative flex min-h-0 flex-1 flex-col justify-between gap-4 py-1 sm:gap-6 sm:py-0">
+            <div className="mx-auto w-full max-w-2xl flex-shrink text-center">
+              <h1 className="text-center text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-600 drop-shadow-lg sm:text-7xl lg:text-8xl">
+                TIC TAC CHEC
+              </h1>
+              <p className="mt-3 text-[9px] font-black uppercase tracking-[0.28em] text-cyan-300/90 sm:text-xs sm:tracking-[0.45em]">
                 Chess Movement. Tic-Tac Pressure.
               </p>
-              <p className="mt-4 text-sm leading-6 text-slate-100/92 sm:text-lg sm:leading-8 lg:text-[1.22rem]">
+              <p className="mt-3 text-sm leading-5 text-slate-100/92 sm:text-lg sm:leading-8 lg:text-[1.22rem]">
                 <span className="text-white font-semibold">A fast 4x4 battle</span> where every placement matters, every capture recycles momentum, and every turn pushes you closer to a four-piece line.
               </p>
-              <p className="mt-2 text-sm leading-6 text-slate-300/80 sm:text-base sm:leading-7">
+              <p className="mt-2 text-sm leading-5 text-slate-300/80 sm:text-base sm:leading-7">
                 Drop pieces from your hand, maneuver for control, and now create a live code-based lobby for online play.
               </p>
             </div>
 
-            <div className="mx-auto mt-7 flex w-full max-w-2xl flex-col gap-3 sm:mt-8">
+            <div className="mx-auto flex w-full max-w-2xl min-h-0 flex-1 flex-col justify-end gap-2 sm:gap-3">
               <MenuButton
                 title="Play Over the Board"
                 description="Start a local two-player match with the full gameboard experience."
@@ -708,18 +697,18 @@ function MenuButton({ title, description, tone, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`group w-full rounded-[1.6rem] border border-white/10 bg-gradient-to-r ${toneClasses[tone]} p-[1px] text-left shadow-[0_18px_35px_rgba(15,23,42,0.35)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01]`}
+      className={`group w-full flex-shrink rounded-[1.35rem] border border-white/10 bg-gradient-to-r ${toneClasses[tone]} p-[1px] text-left shadow-[0_18px_35px_rgba(15,23,42,0.35)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01] sm:rounded-[1.6rem]`}
     >
-      <span className="flex w-full flex-col gap-3 rounded-[1.5rem] bg-slate-950/90 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-5">
+      <span className="flex w-full flex-col gap-2 rounded-[1.28rem] bg-slate-950/90 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:rounded-[1.5rem] sm:px-6 sm:py-5">
         <span>
-          <span className="block text-base font-black uppercase tracking-[0.08em] text-white sm:text-xl sm:tracking-[0.12em]">
+          <span className="block text-[15px] font-black uppercase tracking-[0.06em] text-white sm:text-xl sm:tracking-[0.12em]">
             {title}
           </span>
-          <span className="mt-2 block text-sm leading-6 text-slate-300/85 sm:text-base">
+          <span className="mt-1 block text-xs leading-5 text-slate-300/85 sm:mt-2 sm:text-base sm:leading-6">
             {description}
           </span>
         </span>
-        <span className="self-end text-2xl font-black text-cyan-300 transition-transform duration-300 group-hover:translate-x-1 sm:self-auto">
+        <span className="self-end text-xl font-black text-cyan-300 transition-transform duration-300 group-hover:translate-x-1 sm:self-auto sm:text-2xl">
           →
         </span>
       </span>
@@ -729,9 +718,9 @@ function MenuButton({ title, description, tone, onClick }) {
 
 function RulesScreen({ onBack }) {
   return (
-    <div className="flex w-full justify-center md:h-full md:items-center">
-      <div className="flex w-full max-w-6xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 px-4 py-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:px-6 sm:py-5 lg:px-7 lg:py-6 md:h-full md:max-h-full md:justify-center md:overflow-hidden">
-        <div className="flex flex-col gap-3">
+    <div className="flex h-full min-h-0 w-full justify-center">
+      <div className="flex h-full min-h-0 w-full max-w-6xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 px-4 py-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:px-6 sm:py-5 lg:px-7 lg:py-6">
+        <div className="flex flex-shrink-0 flex-col gap-3">
           <div className="flex justify-start">
             <ActionButton onClick={onBack} tone="slate" className="w-full sm:w-auto">
               ← Back To Menu
@@ -744,8 +733,9 @@ function RulesScreen({ onBack }) {
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-[1.05fr_0.95fr] md:min-h-0 md:flex-1 md:overflow-auto">
-          <div className="grid gap-4 content-start">
+        <div className="app-scroll-panel mt-4 flex-1">
+          <div className="grid gap-3 pr-1 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="grid gap-4 content-start">
             {RULE_SECTIONS.map((section) => (
               <div
                 key={section.title}
@@ -759,40 +749,41 @@ function RulesScreen({ onBack }) {
                 </p>
               </div>
             ))}
-          </div>
-
-          <div className="grid gap-4 content-start">
-            <div className="rounded-[1.35rem] border border-white/10 bg-gradient-to-br from-slate-800/90 to-slate-950/90 p-4 lg:p-5">
-              <h2 className="text-base font-black uppercase tracking-[0.12em] text-white lg:text-xl lg:tracking-[0.14em]">
-                Piece Movements
-              </h2>
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-300/85 lg:text-[15px]">
-                <li><span className="font-black text-white">Rook:</span> any distance horizontally or vertically.</li>
-                <li><span className="font-black text-white">Bishop:</span> any distance diagonally.</li>
-                <li><span className="font-black text-white">Knight:</span> L-shape jump, two plus one.</li>
-                <li><span className="font-black text-white">Pawn:</span> one step forward, diagonal captures, flips at the edge.</li>
-              </ul>
             </div>
 
-            <div className="rounded-[1.35rem] border border-cyan-400/15 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 p-4 lg:p-5">
-              <h2 className="text-base font-black uppercase tracking-[0.12em] text-white lg:text-xl lg:tracking-[0.14em]">
-                Key Rules
-              </h2>
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-200/85 lg:text-[15px]">
-                <li>Players place pieces from hand before moving them later.</li>
-                <li>Captured pieces return to the captured player&apos;s hand.</li>
-                <li>White always moves first.</li>
-                <li>Online rematches swap colors with the same opponent.</li>
-              </ul>
-            </div>
+            <div className="grid gap-4 content-start">
+              <div className="rounded-[1.35rem] border border-white/10 bg-gradient-to-br from-slate-800/90 to-slate-950/90 p-4 lg:p-5">
+                <h2 className="text-base font-black uppercase tracking-[0.12em] text-white lg:text-xl lg:tracking-[0.14em]">
+                  Piece Movements
+                </h2>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-300/85 lg:text-[15px]">
+                  <li><span className="font-black text-white">Rook:</span> any distance horizontally or vertically.</li>
+                  <li><span className="font-black text-white">Bishop:</span> any distance diagonally.</li>
+                  <li><span className="font-black text-white">Knight:</span> L-shape jump, two plus one.</li>
+                  <li><span className="font-black text-white">Pawn:</span> one step forward, diagonal captures, flips at the edge.</li>
+                </ul>
+              </div>
 
-            <div className="rounded-[1.35rem] border border-white/10 bg-slate-950/60 p-4 lg:p-5">
-              <h2 className="text-base font-black uppercase tracking-[0.12em] text-white lg:text-xl lg:tracking-[0.14em]">
-                Winning Mindset
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-300/85 lg:text-[15px]">
-                The goal is not checkmate. Build board pressure, recycle captured pieces, and race to align four of your own color first.
-              </p>
+              <div className="rounded-[1.35rem] border border-cyan-400/15 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 p-4 lg:p-5">
+                <h2 className="text-base font-black uppercase tracking-[0.12em] text-white lg:text-xl lg:tracking-[0.14em]">
+                  Key Rules
+                </h2>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-200/85 lg:text-[15px]">
+                  <li>Players place pieces from hand before moving them later.</li>
+                  <li>Captured pieces return to the captured player&apos;s hand.</li>
+                  <li>White always moves first.</li>
+                  <li>Online rematches swap colors with the same opponent.</li>
+                </ul>
+              </div>
+
+              <div className="rounded-[1.35rem] border border-white/10 bg-slate-950/60 p-4 lg:p-5">
+                <h2 className="text-base font-black uppercase tracking-[0.12em] text-white lg:text-xl lg:tracking-[0.14em]">
+                  Winning Mindset
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-300/85 lg:text-[15px]">
+                  The goal is not checkmate. Build board pressure, recycle captured pieces, and race to align four of your own color first.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -816,7 +807,8 @@ function OnlineHubScreen({
       description="Create a code, share it with your opponent, and let the server run the official state for both players."
       onBack={onBack}
     >
-      <div className="grid gap-4">
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="grid gap-2 sm:gap-4">
         <MenuButton
           title="Create Lobby"
           description="Pick your name, choose white, black, or random, and generate a shareable lobby code."
@@ -837,12 +829,13 @@ function OnlineHubScreen({
             onClick={onResumeLobby}
           />
         )}
+        </div>
+        {flashMessage && (
+          <p className="mt-4 rounded-2xl border border-cyan-400/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-200/85">
+            {flashMessage}
+          </p>
+        )}
       </div>
-      {flashMessage && (
-        <p className="mt-6 rounded-2xl border border-cyan-400/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-200/85">
-          {flashMessage}
-        </p>
-      )}
     </CenterCard>
   );
 }
@@ -855,7 +848,7 @@ function OnlineCreateScreen({ values, isSubmitting, flashMessage, onChange, onSu
       description="Your name is required, and your seat preference decides whether you start as white, black, or let the server randomize it."
       onBack={onBack}
     >
-      <form className="mt-6 space-y-5" onSubmit={onSubmit}>
+      <form className="mt-5 flex h-full min-h-0 flex-col gap-4" onSubmit={onSubmit}>
         <TextInput
           label="Your Name"
           value={values.createName}
@@ -868,7 +861,7 @@ function OnlineCreateScreen({ values, isSubmitting, flashMessage, onChange, onSu
           onChange={(value) => onChange('createColorChoice', value)}
         />
         {flashMessage && <InlineNotice message={flashMessage} />}
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+        <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:justify-between">
           <ActionButton onClick={onBack} tone="slate" type="button" className="w-full sm:w-auto">
             Cancel
           </ActionButton>
@@ -889,7 +882,7 @@ function OnlineJoinScreen({ values, isSubmitting, flashMessage, onChange, onSubm
       description="Add your name, paste the six-character lobby code, and connect as player two."
       onBack={onBack}
     >
-      <form className="mt-6 space-y-5" onSubmit={onSubmit}>
+      <form className="mt-5 flex h-full min-h-0 flex-col gap-4" onSubmit={onSubmit}>
         <TextInput
           label="Your Name"
           value={values.joinName}
@@ -905,7 +898,7 @@ function OnlineJoinScreen({ values, isSubmitting, flashMessage, onChange, onSubm
           className="tracking-[0.45em] uppercase"
         />
         {flashMessage && <InlineNotice message={flashMessage} />}
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+        <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:justify-between">
           <ActionButton onClick={onBack} tone="slate" type="button" className="w-full sm:w-auto">
             Cancel
           </ActionButton>
@@ -941,14 +934,14 @@ function OnlineRoomScreen({
         description="Share the join code with player two. This room will stay attached to the same durable lobby instance."
         onBack={onBack}
       >
-        <div className="mt-6 grid gap-4">
+        <div className="mt-5 flex h-full min-h-0 flex-col gap-3">
           <LobbyCodeCard
             code={snapshot?.lobbyCode || '......'}
             onCopy={onCopyCode}
             copyNotice={copyNotice}
             socketStatus={socketStatus}
           />
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-2">
             <InfoCard title="Seat Preference" value={waitingSummary.title} detail={waitingSummary.detail} />
             <InfoCard
               title="Players"
@@ -1008,25 +1001,25 @@ function OnlineRoomScreen({
 
 function CenterCard({ title, eyebrow, description, onBack, children }) {
   return (
-    <div className="flex w-full justify-center md:h-full md:items-center">
-      <div className="flex w-full max-w-4xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-900/80 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8 md:max-h-full md:overflow-auto">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex h-full min-h-0 w-full justify-center">
+      <div className="flex h-full min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/80 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8">
+        <div className="flex flex-shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
               {eyebrow}
             </p>
-            <h1 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-5xl">
+            <h1 className="mt-2 text-[1.65rem] font-black tracking-tight text-white sm:mt-3 sm:text-5xl">
               {title}
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300/85 sm:text-base sm:leading-7">
+            <p className="mt-3 max-w-2xl text-sm leading-5 text-slate-300/85 sm:mt-4 sm:text-base sm:leading-7">
               {description}
             </p>
           </div>
-          <ActionButton onClick={onBack} tone="slate" className="w-full sm:w-auto">
+          <ActionButton onClick={onBack} tone="slate" className="w-full flex-shrink-0 sm:w-auto">
             ← Back
           </ActionButton>
         </div>
-        <div className="mt-4 min-h-0">
+        <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
           {children}
         </div>
       </div>
@@ -1060,7 +1053,7 @@ function GameScreen({
   mobileHandPlayer = null,
 }) {
   const showRematchReadiness = Boolean(winner && rematchState);
-  const boardShellClassName = 'w-full max-w-[21rem] sm:max-w-[24rem] md:w-[35rem] md:max-w-[35rem] lg:w-[39rem] lg:max-w-[39rem]';
+  const boardShellClassName = 'w-full max-w-[18.5rem] sm:max-w-[21rem] md:w-[35rem] md:max-w-[35rem] lg:w-[39rem] lg:max-w-[39rem]';
   const mobileBottomHandLabel = mobileHandPlayer === 'white'
     ? whiteLabel
     : mobileHandPlayer === 'black'
@@ -1093,12 +1086,12 @@ function GameScreen({
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="mx-auto flex h-full w-full max-w-[1450px] min-h-0 flex-1 flex-col gap-2 md:gap-4">
-        <div className="md:hidden">
+        <div className="flex-shrink-0 md:hidden">
           <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
             <ActionButton
               onClick={onBack}
               tone="slate"
-              className="justify-self-start px-3 py-2 text-[10px] tracking-[0.1em] sm:px-4 sm:py-2.5 sm:text-xs"
+              className="justify-self-start px-2.5 py-1.5 text-[9px] tracking-[0.08em] sm:px-4 sm:py-2.5 sm:text-xs"
             >
               ← Menu
             </ActionButton>
@@ -1109,7 +1102,7 @@ function GameScreen({
               <ActionButton
                 onClick={onCopyCode}
                 tone="teal"
-                className="justify-self-end px-3 py-2 text-[10px] tracking-[0.1em] sm:px-4 sm:py-2.5 sm:text-xs"
+                className="justify-self-end px-2.5 py-1.5 text-[9px] tracking-[0.08em] sm:px-4 sm:py-2.5 sm:text-xs"
               >
                 Copy
               </ActionButton>
@@ -1118,7 +1111,7 @@ function GameScreen({
             )}
           </div>
           {socketStatus && (
-            <div className="mt-2 flex justify-center">
+            <div className="mt-1.5 flex justify-center">
               <ConnectionBadge status={socketStatus} copyNotice={copyNotice} />
             </div>
           )}
@@ -1147,7 +1140,7 @@ function GameScreen({
 
         <div className="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-hidden pb-2 md:flex-row md:justify-center md:gap-6 md:pb-4">
           {showMobileHands && (
-            <div className="w-full md:hidden">
+            <div className="w-full flex-shrink-0 md:hidden">
               <HandDisplay
                 layout="tray"
                 title={`${mobileTopHandLabel}'s Hand`}
@@ -1171,7 +1164,7 @@ function GameScreen({
             />
           </div>
 
-          <div className={`z-10 w-full flex-shrink-0 ${boardShellClassName}`}>
+          <div className={`z-10 flex min-h-0 w-full flex-1 flex-col justify-center ${boardShellClassName}`}>
             <div className="mb-1.5 flex w-full justify-center sm:mb-2">
               <div
                 className={`w-full rounded-full font-black uppercase text-center leading-tight shadow-xl transition-all duration-500 ${
@@ -1226,7 +1219,7 @@ function GameScreen({
           </div>
 
           {showMobileHands && (
-            <div className="w-full md:hidden">
+            <div className="w-full flex-shrink-0 md:hidden">
               <HandDisplay
                 layout="tray"
                 title={`${mobileBottomHandLabel}'s Hand`}
@@ -1275,8 +1268,8 @@ function BottomStatusBar({
   }
 
   return (
-    <div className="mt-2 rounded-[1.35rem] border border-white/10 bg-slate-950/75 px-3 py-2.5 shadow-[0_20px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:mt-4 sm:rounded-[1.75rem] sm:px-4 sm:py-3">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="mt-2 flex-shrink-0 rounded-[1.35rem] border border-white/10 bg-slate-950/75 px-3 py-2.5 shadow-[0_20px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:mt-4 sm:rounded-[1.75rem] sm:px-4 sm:py-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-h-[1.5rem]">
           {notice && (
             <p className="text-xs font-semibold text-slate-100 sm:text-base">
@@ -1308,12 +1301,12 @@ function BottomStatusBar({
 
 function LobbyCodeCard({ code, onCopy, copyNotice, socketStatus }) {
   return (
-    <div className="rounded-[1.75rem] border border-cyan-400/20 bg-gradient-to-br from-slate-950/80 via-slate-900/80 to-cyan-950/40 p-4 sm:p-6">
+    <div className="rounded-[1.5rem] border border-cyan-400/20 bg-gradient-to-br from-slate-950/80 via-slate-900/80 to-cyan-950/40 p-3.5 sm:rounded-[1.75rem] sm:p-6">
       <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
         Share This Lobby Code
       </p>
-      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="break-all text-3xl font-black tracking-[0.22em] text-white sm:text-5xl sm:tracking-[0.35em]">
+      <div className="mt-3 flex flex-col gap-3 sm:mt-4 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="break-all text-[1.7rem] font-black tracking-[0.16em] text-white sm:text-5xl sm:tracking-[0.35em]">
           {code}
         </p>
         <ActionButton onClick={onCopy} tone="cyan" className="w-full sm:w-auto">
@@ -1356,7 +1349,7 @@ function TextInput({ label, className = '', ...props }) {
       </span>
       <input
         {...props}
-        className={`mt-3 w-full rounded-2xl border border-white/10 bg-slate-950/85 px-5 py-4 text-base text-white outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/20 ${className}`}
+        className={`mt-2.5 w-full rounded-2xl border border-white/10 bg-slate-950/85 px-4 py-3 text-base text-white outline-none transition focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/20 sm:mt-3 sm:px-5 sm:py-4 ${className}`}
       />
     </label>
   );
@@ -1374,7 +1367,7 @@ function ColorChoicePicker({ value, onChange }) {
       <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300/90">
         Color Preference
       </p>
-      <div className="mt-3 grid gap-3">
+      <div className="mt-2.5 grid gap-2.5 sm:mt-3 sm:gap-3">
         {options.map((option) => {
           const active = option.value === value;
 
@@ -1383,7 +1376,7 @@ function ColorChoicePicker({ value, onChange }) {
               key={option.value}
               type="button"
               onClick={() => onChange(option.value)}
-              className={`rounded-2xl border px-5 py-4 text-left transition ${
+              className={`rounded-2xl border px-4 py-3 text-left transition sm:px-5 sm:py-4 ${
                 active
                   ? 'border-cyan-300/50 bg-cyan-400/10 shadow-[0_0_30px_rgba(34,211,238,0.12)]'
                   : 'border-white/10 bg-slate-950/80 hover:border-white/25 hover:bg-white/5'
@@ -1392,7 +1385,7 @@ function ColorChoicePicker({ value, onChange }) {
               <span className="block text-base font-black text-white">
                 {option.label}
               </span>
-              <span className="mt-1 block text-sm leading-6 text-slate-300/80">
+              <span className="mt-1 block text-sm leading-5 text-slate-300/80 sm:leading-6">
                 {option.detail}
               </span>
             </button>
@@ -1405,7 +1398,7 @@ function ColorChoicePicker({ value, onChange }) {
 
 function InlineNotice({ message }) {
   return (
-    <div className="rounded-2xl border border-cyan-400/20 bg-slate-950/75 px-4 py-3 text-sm text-slate-200/90">
+    <div className="rounded-2xl border border-cyan-400/20 bg-slate-950/75 px-4 py-2.5 text-sm text-slate-200/90 sm:py-3">
       {message}
     </div>
   );
@@ -1421,7 +1414,7 @@ function ConnectionBadge({ status, copyNotice }) {
   };
 
   return (
-    <div className={`max-w-full rounded-full border px-4 py-2 text-center text-[10px] font-black uppercase tracking-[0.2em] sm:text-xs sm:tracking-[0.24em] ${colorClasses[status] || colorClasses.idle}`}>
+    <div className={`max-w-full rounded-full border px-3.5 py-1.5 text-center text-[9px] font-black uppercase tracking-[0.16em] sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.24em] ${colorClasses[status] || colorClasses.idle}`}>
       {copyNotice || status}
     </div>
   );
@@ -1441,7 +1434,7 @@ function ActionButton({ children, onClick, tone = 'cyan', type = 'button', disab
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center justify-center rounded-full border-2 bg-gradient-to-r px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white shadow-[0_10px_30px_rgba(15,23,42,0.4)] transition-all duration-300 sm:px-7 sm:text-base sm:tracking-[0.14em] ${disabled ? 'cursor-not-allowed opacity-50' : 'hover:scale-105 active:scale-95'} ${toneClasses[tone]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-full border-2 bg-gradient-to-r px-4 py-2.5 text-xs font-black uppercase tracking-[0.1em] text-white shadow-[0_10px_30px_rgba(15,23,42,0.4)] transition-all duration-300 sm:px-7 sm:py-3 sm:text-base sm:tracking-[0.14em] ${disabled ? 'cursor-not-allowed opacity-50' : 'hover:scale-105 active:scale-95'} ${toneClasses[tone]} ${className}`}
     >
       {children}
     </button>
@@ -1461,7 +1454,7 @@ function HandDisplay({
     return (
       <div
         className={`
-          rounded-[1.15rem] border-2 bg-gradient-to-br p-2.5 shadow-xl sm:rounded-[1.35rem] sm:p-3
+          flex-shrink-0 rounded-[1.15rem] border-2 bg-gradient-to-br p-2.5 shadow-xl sm:rounded-[1.35rem] sm:p-3
           ${player === 'white' ? 'from-indigo-900 to-blue-950' : 'from-slate-800 to-gray-900'}
           ${isActive ? 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.2)]' : 'border-gray-700/50'}
         `}
