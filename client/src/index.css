@@ -41,9 +41,9 @@ body {
 
 .app-safe-shell {
   padding-top: max(0.75rem, var(--safe-top));
-  padding-right: max(0.75rem, var(--safe-right));
+  padding-right: max(0.5rem, var(--safe-right));
   padding-bottom: max(0.75rem, var(--safe-bottom));
-  padding-left: max(0.75rem, var(--safe-left));
+  padding-left: max(0.5rem, var(--safe-left));
 }
 
 .app-scroll-panel {

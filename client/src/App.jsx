@@ -536,7 +536,7 @@ function App() {
       <div className="absolute left-[-10rem] top-20 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
       <div className="absolute right-[-8rem] bottom-10 h-72 w-72 rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
 
-      <div className="app-safe-shell relative flex h-full min-h-0 w-full overflow-hidden">
+      <div className="app-safe-shell relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden">
         {activeScreen === 'menu' && (
           <MenuScreen
             onPlayOverBoard={startLocalGame}
@@ -631,8 +631,8 @@ function MenuScreen({
   onResumeOnline,
 }) {
   return (
-    <div className="flex h-full min-h-0 w-full justify-center">
-      <div className="flex h-full min-h-0 w-full max-w-[900px]">
+    <div className="flex h-full min-h-0 w-full items-center justify-center">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[900px]">
         <section className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8 lg:p-10">
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 via-transparent to-blue-500/10 pointer-events-none" />
           <div className="relative flex min-h-0 flex-1 flex-col justify-between gap-4 py-1 sm:gap-6 sm:py-0">
@@ -643,10 +643,7 @@ function MenuScreen({
               <p className="mt-3 text-[9px] font-black uppercase tracking-[0.28em] text-cyan-300/90 sm:text-xs sm:tracking-[0.45em]">
                 Chess Movement. Tic-Tac Pressure.
               </p>
-              <p className="mt-3 text-sm leading-5 text-slate-100/92 sm:text-lg sm:leading-8 lg:text-[1.22rem]">
-                <span className="text-white font-semibold">A fast 4x4 battle</span> where every placement matters, every capture recycles momentum, and every turn pushes you closer to a four-piece line.
-              </p>
-              <p className="mt-2 text-sm leading-5 text-slate-300/80 sm:text-base sm:leading-7">
+              <p className="mt-3 text-sm leading-5 text-slate-300/80 sm:text-base sm:leading-7">
                 Drop pieces from your hand, maneuver for control, and now create a live code-based lobby for online play.
               </p>
             </div>
@@ -697,7 +694,7 @@ function MenuButton({ title, description, tone, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`group w-full flex-shrink rounded-[1.35rem] border border-white/10 bg-gradient-to-r ${toneClasses[tone]} p-[1px] text-left shadow-[0_18px_35px_rgba(15,23,42,0.35)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01] sm:rounded-[1.6rem]`}
+      className={`group w-full flex-shrink rounded-[1.35rem] border border-white/10 bg-gradient-to-r ${toneClasses[tone]} p-[1px] text-left shadow-[0_18px_35px_rgba(15,23,42,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_42px_rgba(15,23,42,0.4)] sm:rounded-[1.6rem]`}
     >
       <span className="flex w-full flex-col gap-2 rounded-[1.28rem] bg-slate-950/90 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:rounded-[1.5rem] sm:px-6 sm:py-5">
         <span>
@@ -717,16 +714,33 @@ function MenuButton({ title, description, tone, onClick }) {
 }
 
 function RulesScreen({ onBack }) {
+  const compactHeaderButtonClass = 'h-10 w-full justify-center overflow-hidden rounded-[1rem] px-0 py-0 text-[9px] tracking-[0.04em] !border-slate-600/80 !from-slate-800 !to-slate-950 !shadow-none hover:scale-100 active:scale-100 sm:h-auto sm:px-3 sm:py-2 sm:text-[10px]';
+
   return (
-    <div className="flex h-full min-h-0 w-full justify-center">
-      <div className="flex h-full min-h-0 w-full max-w-6xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 px-4 py-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:px-6 sm:py-5 lg:px-7 lg:py-6">
+    <div className="flex h-full min-h-0 w-full items-center justify-center">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 px-4 py-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:px-6 sm:py-5 lg:px-7 lg:py-6">
         <div className="flex flex-shrink-0 flex-col gap-3">
-          <div className="flex justify-start">
-            <ActionButton onClick={onBack} tone="slate" className="w-full sm:w-auto">
-              ← Back To Menu
+          <div className="grid grid-cols-[2.7rem_1fr_2.7rem] items-center gap-2 md:hidden">
+            <ActionButton
+              onClick={onBack}
+              tone="slate"
+              ariaLabel="Back to menu"
+              className={compactHeaderButtonClass}
+            >
+              <span aria-hidden="true" className="text-base leading-none sm:text-sm">←</span>
+              <span className="sr-only sm:not-sr-only sm:ml-1">Menu</span>
+            </ActionButton>
+            <h1 className="justify-self-center text-center text-[1.95rem] font-black leading-none tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 drop-shadow-lg">
+              How To Play
+            </h1>
+            <div className="w-full" />
+          </div>
+          <div className="hidden md:flex md:justify-start">
+            <ActionButton onClick={onBack} tone="slate" className="w-full px-4 py-2 text-xs tracking-[0.08em] sm:w-auto sm:px-5 sm:text-sm">
+              ← Menu
             </ActionButton>
           </div>
-          <div className="flex justify-end pt-1 text-right sm:-mt-3">
+          <div className="hidden pt-1 text-right sm:-mt-3 md:flex md:justify-end">
             <h1 className="text-4xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 sm:text-6xl lg:text-[4.2rem]">
               How To Play
             </h1>
@@ -803,11 +817,14 @@ function OnlineHubScreen({
   return (
     <CenterCard
       title="Online Play"
-      eyebrow="Live Durable Object Rooms"
       description="Create a code, share it with your opponent, and let the server run the official state for both players."
       onBack={onBack}
+      hideEyebrow
+      compactMobileHeader
+      desktopCenteredHeader
+      contentClassName="justify-end"
     >
-      <div className="flex h-full min-h-0 flex-col">
+      <div className="flex h-full min-h-0 flex-col justify-end">
         <div className="grid gap-2 sm:gap-4">
         <MenuButton
           title="Create Lobby"
@@ -844,9 +861,10 @@ function OnlineCreateScreen({ values, isSubmitting, flashMessage, onChange, onSu
   return (
     <CenterCard
       title="Create Lobby"
-      eyebrow="Host The Match"
       description="Your name is required, and your seat preference decides whether you start as white, black, or let the server randomize it."
       onBack={onBack}
+      hideEyebrow
+      compactMobileHeader
     >
       <form className="mt-5 flex h-full min-h-0 flex-col gap-4" onSubmit={onSubmit}>
         <TextInput
@@ -878,9 +896,10 @@ function OnlineJoinScreen({ values, isSubmitting, flashMessage, onChange, onSubm
   return (
     <CenterCard
       title="Join Lobby"
-      eyebrow="Enter The Code"
       description="Add your name, paste the six-character lobby code, and connect as player two."
       onBack={onBack}
+      hideEyebrow
+      compactMobileHeader
     >
       <form className="mt-5 flex h-full min-h-0 flex-col gap-4" onSubmit={onSubmit}>
         <TextInput
@@ -930,9 +949,10 @@ function OnlineRoomScreen({
     return (
       <CenterCard
         title="Lobby Ready"
-        eyebrow="Waiting Room"
         description="Share the join code with player two. This room will stay attached to the same durable lobby instance."
         onBack={onBack}
+        hideEyebrow
+        compactMobileHeader
       >
         <div className="mt-5 flex h-full min-h-0 flex-col gap-3">
           <LobbyCodeCard
@@ -999,27 +1019,91 @@ function OnlineRoomScreen({
   );
 }
 
-function CenterCard({ title, eyebrow, description, onBack, children }) {
+function CenterCard({
+  title,
+  eyebrow,
+  description,
+  onBack,
+  children,
+  hideEyebrow = false,
+  compactMobileHeader = false,
+  contentClassName = '',
+  desktopCenteredHeader = false,
+}) {
+  const compactHeaderButtonClass = 'h-10 w-full justify-center overflow-hidden rounded-[1rem] px-0 py-0 text-[9px] tracking-[0.04em] !border-slate-600/80 !from-slate-800 !to-slate-950 !shadow-none hover:scale-100 active:scale-100 sm:h-auto sm:px-3 sm:py-2 sm:text-[10px]';
+
   return (
-    <div className="flex h-full min-h-0 w-full justify-center">
-      <div className="flex h-full min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/80 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8">
-        <div className="flex flex-shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
-              {eyebrow}
-            </p>
-            <h1 className="mt-2 text-[1.65rem] font-black tracking-tight text-white sm:mt-3 sm:text-5xl">
-              {title}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-5 text-slate-300/85 sm:mt-4 sm:text-base sm:leading-7">
+    <div className="flex h-full min-h-0 w-full items-center justify-center">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/80 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8">
+        <div className="flex flex-shrink-0 flex-col gap-3">
+          {compactMobileHeader ? (
+            <div className="grid grid-cols-[2.7rem_1fr_2.7rem] items-center gap-2 md:hidden">
+              <ActionButton
+                onClick={onBack}
+                tone="slate"
+                ariaLabel="Back to menu"
+                className={compactHeaderButtonClass}
+              >
+                <span aria-hidden="true" className="text-base leading-none sm:text-sm">←</span>
+                <span className="sr-only sm:not-sr-only sm:ml-1">Menu</span>
+              </ActionButton>
+              <h1 className="justify-self-center text-center text-[1.95rem] font-black leading-none tracking-tight text-white">
+                {title}
+              </h1>
+              <div className="w-full" />
+            </div>
+          ) : null}
+
+          {desktopCenteredHeader ? (
+            <div className={`hidden md:grid md:grid-cols-[auto_1fr_auto] md:items-start md:gap-4 ${compactMobileHeader ? 'md:grid' : ''}`}>
+              <div className="flex justify-start">
+                <ActionButton onClick={onBack} tone="slate" className="w-full flex-shrink-0 px-4 py-2 text-xs tracking-[0.08em] sm:w-auto sm:px-5 sm:text-sm">
+                  ← Menu
+                </ActionButton>
+              </div>
+              <div className="mx-auto max-w-2xl text-center">
+                {!hideEyebrow && eyebrow ? (
+                  <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
+                    {eyebrow}
+                  </p>
+                ) : null}
+                <h1 className={`${hideEyebrow ? 'mt-0' : 'mt-2 sm:mt-3'} text-[1.65rem] font-black tracking-tight text-white sm:text-5xl`}>
+                  {title}
+                </h1>
+                <p className="mt-3 text-sm leading-5 text-slate-300/85 sm:mt-4 sm:text-base sm:leading-7">
+                  {description}
+                </p>
+              </div>
+              <div />
+            </div>
+          ) : null}
+
+          <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 ${compactMobileHeader ? 'hidden md:flex' : ''} ${desktopCenteredHeader ? 'md:hidden' : ''}`}>
+            <div>
+              {!hideEyebrow && eyebrow ? (
+                <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
+                  {eyebrow}
+                </p>
+              ) : null}
+              <h1 className={`${hideEyebrow ? 'mt-0' : 'mt-2 sm:mt-3'} text-[1.65rem] font-black tracking-tight text-white sm:text-5xl`}>
+                {title}
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-5 text-slate-300/85 sm:mt-4 sm:text-base sm:leading-7">
+                {description}
+              </p>
+            </div>
+            <ActionButton onClick={onBack} tone="slate" className="w-full flex-shrink-0 px-4 py-2 text-xs tracking-[0.08em] sm:w-auto sm:px-5 sm:text-sm">
+              ← Menu
+            </ActionButton>
+          </div>
+
+          {compactMobileHeader ? (
+            <p className="text-center text-sm leading-5 text-slate-300/85 md:hidden">
               {description}
             </p>
-          </div>
-          <ActionButton onClick={onBack} tone="slate" className="w-full flex-shrink-0 sm:w-auto">
-            ← Back
-          </ActionButton>
+          ) : null}
         </div>
-        <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className={`mt-4 flex min-h-0 flex-1 flex-col overflow-hidden ${contentClassName}`}>
           {children}
         </div>
       </div>
@@ -1053,7 +1137,7 @@ function GameScreen({
   mobileHandPlayer = null,
 }) {
   const showRematchReadiness = Boolean(winner && rematchState);
-  const boardShellClassName = 'w-full max-w-[18.5rem] sm:max-w-[21rem] md:w-[35rem] md:max-w-[35rem] lg:w-[39rem] lg:max-w-[39rem]';
+  const boardShellClassName = 'w-full max-w-none md:w-[35rem] md:max-w-[35rem] lg:w-[39rem] lg:max-w-[39rem]';
   const mobileBottomHandLabel = mobileHandPlayer === 'white'
     ? whiteLabel
     : mobileHandPlayer === 'black'
@@ -1082,32 +1166,38 @@ function GameScreen({
   const showMobileHands = Boolean(mobileHandPlayer);
   const mobileBottomHandIsActive = mobileHandPlayer === currentTurn && !winner;
   const mobileTopHandIsActive = mobileOpponentPlayer === currentTurn && !winner;
+  const compactMobileEndgame = Boolean(winner && showMobileHands);
+  const mobileHeaderButtonClass = 'h-10 w-full justify-center overflow-hidden rounded-[1rem] px-0 py-0 text-[9px] tracking-[0.04em] !border-slate-600/80 !from-slate-800 !to-slate-950 !shadow-none hover:scale-100 active:scale-100 sm:h-auto sm:px-3 sm:py-2 sm:text-[10px]';
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 w-full self-stretch flex-col overflow-hidden">
       <div className="mx-auto flex h-full w-full max-w-[1450px] min-h-0 flex-1 flex-col gap-2 md:gap-4">
         <div className="flex-shrink-0 md:hidden">
-          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
+          <div className="grid grid-cols-[2.7rem_1fr_2.7rem] items-center gap-2 sm:grid-cols-[4.4rem_1fr_4.4rem] sm:gap-2">
             <ActionButton
               onClick={onBack}
               tone="slate"
-              className="justify-self-start px-2.5 py-1.5 text-[9px] tracking-[0.08em] sm:px-4 sm:py-2.5 sm:text-xs"
+              ariaLabel="Back to menu"
+              className={mobileHeaderButtonClass}
             >
-              ← Menu
+              <span aria-hidden="true" className="text-base leading-none sm:text-sm">←</span>
+              <span className="sr-only sm:not-sr-only sm:ml-1">Menu</span>
             </ActionButton>
-            <h1 className="text-center text-[1.65rem] font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 drop-shadow-lg sm:text-4xl">
+            <h1 className="justify-self-center text-center text-[1.95rem] font-black leading-none tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 drop-shadow-lg sm:text-[4.75rem]">
               TIC TAC CHEC
             </h1>
             {copyCode && onCopyCode ? (
               <ActionButton
                 onClick={onCopyCode}
                 tone="teal"
-                className="justify-self-end px-2.5 py-1.5 text-[9px] tracking-[0.08em] sm:px-4 sm:py-2.5 sm:text-xs"
+                ariaLabel="Copy code"
+                className={mobileHeaderButtonClass}
               >
-                Copy
+                <span aria-hidden="true" className="text-sm leading-none sm:hidden">⎘</span>
+                <span className="hidden sm:inline">Copy</span>
               </ActionButton>
             ) : (
-              <div />
+              <div className="w-full" />
             )}
           </div>
           {socketStatus && (
@@ -1119,8 +1209,8 @@ function GameScreen({
 
         <div className="hidden md:grid md:mb-4 md:grid-cols-[1fr_auto_1fr] md:items-center md:gap-3">
           <div className="flex flex-wrap justify-start gap-2 sm:gap-3">
-            <ActionButton onClick={onBack} tone="slate" className="w-full sm:w-auto">
-              ← Back To Menu
+            <ActionButton onClick={onBack} tone="slate" className="w-full px-4 py-2 text-xs tracking-[0.08em] sm:w-auto sm:px-5 sm:text-sm">
+              ← Menu
             </ActionButton>
             {copyCode && onCopyCode && (
               <ActionButton onClick={onCopyCode} tone="teal" className="w-full sm:w-auto">
@@ -1138,15 +1228,16 @@ function GameScreen({
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-hidden pb-2 md:flex-row md:justify-center md:gap-6 md:pb-4">
+        <div className="flex min-h-0 flex-1 flex-col items-stretch gap-2 overflow-hidden pb-2 md:flex-row md:items-center md:justify-center md:gap-6 md:pb-4">
           {showMobileHands && (
-            <div className="w-full flex-shrink-0 md:hidden">
+            <div className="w-full flex-shrink-0 self-stretch md:hidden">
               <HandDisplay
                 layout="tray"
                 title={`${mobileTopHandLabel}'s Hand`}
                 pieces={mobileTopHandPieces}
                 player={mobileOpponentPlayer}
                 isActive={mobileTopHandIsActive}
+                compact={compactMobileEndgame}
                 selectedPiece={selectedPiece}
                 onPieceClick={onHandPieceClick}
               />
@@ -1164,12 +1255,12 @@ function GameScreen({
             />
           </div>
 
-          <div className={`z-10 flex min-h-0 w-full flex-1 flex-col justify-center ${boardShellClassName}`}>
+          <div className={`z-10 flex min-h-0 w-full flex-1 self-stretch flex-col justify-center ${boardShellClassName}`}>
             <div className="mb-1.5 flex w-full justify-center sm:mb-2">
               <div
                 className={`w-full rounded-full font-black uppercase text-center leading-tight shadow-xl transition-all duration-500 ${
                   winner
-                    ? 'bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 px-3 py-2 text-xs tracking-[0.1em] text-slate-950 shadow-[0_0_35px_rgba(251,191,36,0.9)] sm:px-4 sm:py-2.5 sm:text-base md:text-xl'
+                    ? 'bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 px-3 py-1.5 text-[11px] tracking-[0.08em] text-slate-950 shadow-[0_0_35px_rgba(251,191,36,0.9)] sm:px-4 sm:py-2.5 sm:text-base md:text-xl'
                     : currentTurn === 'white'
                       ? 'bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-1.5 text-[9px] tracking-[0.12em] text-white shadow-blue-500/40 sm:px-4 sm:py-2 sm:text-[11px] md:text-sm md:tracking-[0.2em]'
                       : 'bg-gradient-to-r from-gray-700 to-gray-900 px-3 py-1.5 text-[9px] tracking-[0.12em] text-white shadow-gray-900/50 sm:px-4 sm:py-2 sm:text-[11px] md:text-sm md:tracking-[0.2em]'
@@ -1179,7 +1270,7 @@ function GameScreen({
               </div>
             </div>
 
-            <div className="relative grid w-full grid-cols-4 gap-0 overflow-hidden rounded-[1.2rem] border-4 border-slate-700/50 bg-blue-950 p-2 shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-sm sm:rounded-[1.4rem] sm:border-[5px] sm:p-2.5 md:rounded-3xl md:border-8 md:p-6">
+            <div className="relative grid w-full grid-cols-4 gap-0 overflow-hidden rounded-[1.2rem] border-4 border-slate-700/50 bg-blue-950 p-2.5 shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-sm sm:rounded-[1.4rem] sm:border-[5px] sm:p-3 md:rounded-3xl md:border-8 md:p-6">
               <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none mix-blend-overlay" />
               {board.map((piece, index) => {
                 const row = Math.floor(index / 4);
@@ -1200,12 +1291,12 @@ function GameScreen({
                     `}
                   >
                     {piece && (
-                      <div className={`${isSelected ? 'scale-105 sm:scale-110' : 'scale-[0.78] sm:scale-[0.86] md:scale-100'} transition-transform duration-300`}>
+                      <div className={`${isSelected ? 'scale-105 sm:scale-110' : 'scale-[0.88] sm:scale-[0.95] md:scale-100'} transition-transform duration-300`}>
                         <ChessPiece
                           type={piece.type}
                           player={piece.player}
                           direction={pawnDirection}
-                          iconClassName="text-[1.95rem] sm:text-[2.45rem] md:text-[3.75rem]"
+                          iconClassName="text-[2.3rem] sm:text-[2.75rem] md:text-[3.75rem]"
                         />
                       </div>
                     )}
@@ -1219,13 +1310,14 @@ function GameScreen({
           </div>
 
           {showMobileHands && (
-            <div className="w-full flex-shrink-0 md:hidden">
+            <div className="w-full flex-shrink-0 self-stretch md:hidden">
               <HandDisplay
                 layout="tray"
                 title={`${mobileBottomHandLabel}'s Hand`}
                 pieces={mobileBottomHandPieces}
                 player={mobileHandPlayer}
                 isActive={mobileBottomHandIsActive}
+                compact={compactMobileEndgame}
                 selectedPiece={selectedPiece}
                 onPieceClick={onHandPieceClick}
               />
@@ -1250,6 +1342,7 @@ function GameScreen({
           onPrimaryAction={onPrimaryAction}
           primaryActionDisabled={primaryActionDisabled}
           rematchState={showRematchReadiness ? rematchState : null}
+          compactMobile={Boolean(winner)}
         />
       </div>
     </div>
@@ -1262,33 +1355,34 @@ function BottomStatusBar({
   onPrimaryAction,
   primaryActionDisabled,
   rematchState,
+  compactMobile = false,
 }) {
   if (!primaryActionLabel && !notice && !rematchState) {
     return null;
   }
 
   return (
-    <div className="mt-2 flex-shrink-0 rounded-[1.35rem] border border-white/10 bg-slate-950/75 px-3 py-2.5 shadow-[0_20px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:mt-4 sm:rounded-[1.75rem] sm:px-4 sm:py-3">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className={`mt-2 flex-shrink-0 rounded-[1.35rem] border border-white/10 bg-slate-950/75 shadow-[0_20px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:mt-4 sm:rounded-[1.75rem] sm:px-4 sm:py-3 ${compactMobile ? 'px-3 py-2' : 'px-3 py-2.5'}`}>
+      <div className={`flex flex-col lg:flex-row lg:items-center lg:justify-between ${compactMobile ? 'gap-2' : 'gap-3'}`}>
         <div className="min-h-[1.5rem]">
           {notice && (
-            <p className="text-xs font-semibold text-slate-100 sm:text-base">
+            <p className={`font-semibold text-slate-100 sm:text-base ${compactMobile ? 'text-[11px]' : 'text-xs'}`}>
               {notice}
             </p>
           )}
           {rematchState && (
-            <p className={`text-[10px] uppercase tracking-[0.16em] text-slate-400 sm:text-xs sm:tracking-[0.2em] ${notice ? 'mt-1' : ''}`}>
+            <p className={`uppercase tracking-[0.16em] text-slate-400 sm:text-xs sm:tracking-[0.2em] ${notice ? 'mt-1' : ''} ${compactMobile ? 'text-[9px]' : 'text-[10px]'}`}>
               Rematch readiness: {Number(rematchState.whiteReady) + Number(rematchState.blackReady)} / 2
             </p>
           )}
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+        <div className={`flex flex-col sm:flex-row sm:justify-end ${compactMobile ? 'gap-2' : 'gap-3'}`}>
           {primaryActionLabel && onPrimaryAction && (
             <ActionButton
               onClick={onPrimaryAction}
               tone="success"
               disabled={primaryActionDisabled}
-              className="w-full sm:w-auto"
+              className={`w-full sm:w-auto ${compactMobile ? 'px-4 py-2 text-[11px] tracking-[0.08em] sm:text-sm' : ''}`}
             >
               {primaryActionLabel}
             </ActionButton>
@@ -1302,22 +1396,22 @@ function BottomStatusBar({
 function LobbyCodeCard({ code, onCopy, copyNotice, socketStatus }) {
   return (
     <div className="rounded-[1.5rem] border border-cyan-400/20 bg-gradient-to-br from-slate-950/80 via-slate-900/80 to-cyan-950/40 p-3.5 sm:rounded-[1.75rem] sm:p-6">
-      <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
+      <p className="text-center text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
         Share This Lobby Code
       </p>
-      <div className="mt-3 flex flex-col gap-3 sm:mt-4 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="break-all text-[1.7rem] font-black tracking-[0.16em] text-white sm:text-5xl sm:tracking-[0.35em]">
+      <div className="mt-3 flex flex-col items-center gap-3 text-center sm:mt-4 sm:gap-4">
+        <p className="break-all text-center text-[1.7rem] font-black tracking-[0.16em] text-white sm:text-5xl sm:tracking-[0.35em]">
           {code}
         </p>
         <ActionButton onClick={onCopy} tone="cyan" className="w-full sm:w-auto">
           Copy Code
         </ActionButton>
       </div>
-      <p className="mt-4 text-sm text-slate-300/85">
+      <p className="mt-4 text-center text-sm text-slate-300/85">
         Socket status: <span className="font-semibold text-white">{socketStatus}</span>
       </p>
       {copyNotice && (
-        <p className="mt-2 text-sm text-cyan-200">
+        <p className="mt-2 text-center text-sm text-cyan-200">
           {copyNotice}
         </p>
       )}
@@ -1420,13 +1514,13 @@ function ConnectionBadge({ status, copyNotice }) {
   );
 }
 
-function ActionButton({ children, onClick, tone = 'cyan', type = 'button', disabled = false, className = '' }) {
+function ActionButton({ children, onClick, tone = 'cyan', type = 'button', disabled = false, className = '', ariaLabel }) {
   const toneClasses = {
-    cyan: 'from-cyan-500 to-blue-600 shadow-cyan-500/30 border-cyan-300/30',
-    slate: 'from-slate-700 to-slate-900 shadow-slate-950/40 border-white/10',
-    success: 'from-green-600 to-emerald-700 shadow-green-600/35 border-green-300/20',
-    danger: 'from-red-600 to-rose-700 shadow-red-600/35 border-red-300/20',
-    teal: 'from-teal-500 to-cyan-600 shadow-teal-500/30 border-cyan-200/25',
+    cyan: 'from-cyan-500 to-blue-600 border-cyan-300/30 shadow-[0_10px_30px_rgba(6,182,212,0.24)]',
+    slate: 'from-slate-800 to-slate-950 border-slate-600/70 shadow-none',
+    success: 'from-green-600 to-emerald-700 border-green-300/20 shadow-[0_10px_30px_rgba(22,163,74,0.24)]',
+    danger: 'from-red-600 to-rose-700 border-red-300/20 shadow-[0_10px_30px_rgba(220,38,38,0.24)]',
+    teal: 'from-teal-500 to-cyan-600 border-cyan-200/25 shadow-[0_10px_30px_rgba(20,184,166,0.24)]',
   };
 
   return (
@@ -1434,7 +1528,8 @@ function ActionButton({ children, onClick, tone = 'cyan', type = 'button', disab
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center justify-center rounded-full border-2 bg-gradient-to-r px-4 py-2.5 text-xs font-black uppercase tracking-[0.1em] text-white shadow-[0_10px_30px_rgba(15,23,42,0.4)] transition-all duration-300 sm:px-7 sm:py-3 sm:text-base sm:tracking-[0.14em] ${disabled ? 'cursor-not-allowed opacity-50' : 'hover:scale-105 active:scale-95'} ${toneClasses[tone]} ${className}`}
+      aria-label={ariaLabel}
+      className={`inline-flex appearance-none items-center justify-center overflow-hidden rounded-full border-2 bg-gradient-to-r bg-clip-padding px-4 py-2.5 text-xs font-black uppercase tracking-[0.1em] text-white transition-all duration-300 sm:px-7 sm:py-3 sm:text-base sm:tracking-[0.14em] ${disabled ? 'cursor-not-allowed opacity-50' : 'hover:scale-105 active:scale-95'} ${toneClasses[tone]} ${className}`}
     >
       {children}
     </button>
@@ -1449,52 +1544,66 @@ function HandDisplay({
   selectedPiece,
   onPieceClick,
   layout = 'panel',
+  compact = false,
 }) {
   if (layout === 'tray') {
+    const traySlots = [...pieces];
+
+    while (traySlots.length < 4) {
+      traySlots.push(null);
+    }
+
     return (
       <div
         className={`
-          flex-shrink-0 rounded-[1.15rem] border-2 bg-gradient-to-br p-2.5 shadow-xl sm:rounded-[1.35rem] sm:p-3
+          flex w-full flex-shrink-0 flex-col rounded-[1.15rem] border-2 bg-gradient-to-br shadow-xl sm:rounded-[1.35rem] sm:p-3
+          ${compact ? 'min-h-[6.75rem] p-2' : 'min-h-[8rem] p-2.5'}
+          sm:min-h-[8.8rem]
           ${player === 'white' ? 'from-indigo-900 to-blue-950' : 'from-slate-800 to-gray-900'}
           ${isActive ? 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.2)]' : 'border-gray-700/50'}
         `}
       >
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-100 drop-shadow-md sm:text-xs sm:tracking-[0.18em]">
+          <h2 className={`font-black uppercase tracking-[0.14em] text-gray-100 drop-shadow-md sm:text-xs sm:tracking-[0.18em] ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
             {title}
           </h2>
-          <span className={`text-[9px] font-black uppercase tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em] ${isActive ? 'text-yellow-300' : 'text-gray-400'}`}>
+          <span className={`font-black uppercase tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em] ${compact ? 'text-[8px]' : 'text-[9px]'} ${isActive ? 'text-yellow-300' : 'text-gray-400'}`}>
             {isActive ? 'Ready' : 'Standby'}
           </span>
         </div>
-        {pieces.length > 0 ? (
-          <div className="-mx-1 mt-2 overflow-x-auto pb-1 sm:mt-3">
-            <div className="flex min-w-max gap-1.5 px-1 sm:gap-2">
-              {pieces.map((type, index) => {
-                const isSelected =
-                  selectedPiece?.type === type &&
-                  selectedPiece?.player === player &&
-                  selectedPiece?.from === null;
-
+        <div className={`-mx-1 flex flex-1 pb-1 sm:mt-3 sm:min-h-[5.6rem] ${compact ? 'mt-1 min-h-[4.15rem]' : 'mt-2 min-h-[5rem]'}`}>
+          <div className={`grid w-full grid-cols-4 px-1 sm:gap-2 ${compact ? 'gap-1' : 'gap-1.5'}`}>
+            {traySlots.map((type, index) => {
+              if (!type) {
                 return (
-                  <HandPieceButton
-                    key={`${type}-${index}`}
-                    type={type}
-                    player={player}
-                    isActive={isActive}
-                    isSelected={isSelected}
-                    onPieceClick={onPieceClick}
-                    layout="tray"
+                  <div
+                    key={`empty-${index}`}
+                    aria-hidden="true"
+                    className={`rounded-xl border border-white/5 bg-black/10 opacity-0 sm:min-h-[5.6rem] ${compact ? 'min-h-[4.15rem]' : 'min-h-[5rem]'}`}
                   />
                 );
-              })}
-            </div>
+              }
+
+              const isSelected =
+                selectedPiece?.type === type &&
+                selectedPiece?.player === player &&
+                selectedPiece?.from === null;
+
+              return (
+                <HandPieceButton
+                  key={`${type}-${index}`}
+                  type={type}
+                  player={player}
+                  isActive={isActive}
+                  isSelected={isSelected}
+                  onPieceClick={onPieceClick}
+                  layout="tray"
+                  compact={compact}
+                />
+              );
+            })}
           </div>
-        ) : (
-          <p className="py-4 text-center text-sm italic text-gray-500">
-            No pieces left
-          </p>
-        )}
+        </div>
       </div>
     );
   }
@@ -1546,22 +1655,23 @@ function HandPieceButton({
   isSelected,
   onPieceClick,
   layout = 'panel',
+  compact = false,
 }) {
   const defaultPawnDirection = type === 'pawn'
     ? player === 'white' ? -1 : 1
     : undefined;
   const isTray = layout === 'tray';
   const baseClasses = isTray
-    ? 'min-w-[4.35rem] rounded-xl px-2.5 py-2 sm:min-w-[5.25rem] sm:px-3 sm:py-2.5'
-    : 'rounded-xl px-3 py-2';
+    ? `h-full w-full rounded-xl sm:px-3 sm:py-3 ${compact ? 'px-1.5 py-1.5' : 'px-2 py-2.5'}`
+    : 'overflow-hidden rounded-xl px-3 pb-2.5 pt-4 sm:pb-3 sm:pt-5';
   const pieceScaleClasses = isTray
-    ? 'mb-1 drop-shadow-lg'
-    : 'mb-1 drop-shadow-lg scale-110 sm:scale-125';
+    ? `drop-shadow-lg ${compact ? 'mb-0.5' : 'mb-1'}`
+    : 'mb-1 translate-y-1 drop-shadow-lg scale-100 sm:translate-y-1.5 sm:scale-110';
   const pieceIconClassName = isTray
-    ? 'text-[1.55rem] sm:text-[1.95rem]'
+    ? compact ? 'text-[1.5rem] sm:text-[2.2rem]' : 'text-[1.85rem] sm:text-[2.2rem]'
     : 'text-[2.35rem] sm:text-[3.05rem]';
   const labelClasses = isTray
-    ? 'mt-1 text-[9px] tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em]'
+    ? compact ? 'mt-0.5 text-[8px] tracking-[0.1em] sm:text-[10px] sm:tracking-[0.16em]' : 'mt-1 text-[9px] tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em]'
     : 'mt-2 text-[11px] sm:text-xs tracking-wider';
 
   return (
@@ -1572,7 +1682,7 @@ function HandPieceButton({
       className={`
         ${baseClasses}
         flex flex-col items-center transition-all duration-300
-        ${isSelected ? 'scale-105 bg-yellow-400/20 ring-4 ring-yellow-400 shadow-lg' : 'hover:scale-[1.02] hover:bg-white/10 hover:shadow-md'}
+        ${isSelected ? 'scale-[1.02] bg-yellow-400/20 ring-4 ring-yellow-400 shadow-lg' : 'hover:scale-[1.01] hover:bg-white/10 hover:shadow-md'}
         ${!isActive ? 'cursor-not-allowed opacity-50 grayscale-[0.5]' : 'cursor-pointer'}
       `}
     >

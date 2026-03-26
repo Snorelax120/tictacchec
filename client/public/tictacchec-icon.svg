@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="16" fill="#0f172a" />
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#132f4c" />
+  <text x="10" y="41" font-size="21">🐴</text>
+  <text x="31" y="41" font-size="19" fill="#38bdf8">✓</text>
+  <text x="45" y="41" font-size="19" fill="#60a5fa">✕</text>
+</svg>
