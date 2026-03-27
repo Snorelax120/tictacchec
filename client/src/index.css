@@ -53,6 +53,201 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+.mobile-opponent-summary,
+.mobile-very-short-bottom-status,
+.mobile-hand-overlay-action {
+  display: none;
+}
+
+@media (max-height: 700px) {
+  .compact-height-scroll {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 0.25rem;
+  }
+}
+
+@media (max-height: 849px) {
+  .mobile-opponent-hand {
+    display: none;
+  }
+
+  .mobile-opponent-summary {
+    display: block;
+  }
+
+  .mobile-opponent-summary-card {
+    min-height: 2.9rem;
+    border-radius: 0.95rem;
+    padding: 0.4rem 0.65rem;
+    column-gap: 0.35rem;
+  }
+
+  .mobile-opponent-summary-title {
+    font-size: 0.48rem;
+  }
+
+  .mobile-opponent-summary-status {
+    font-size: 0.44rem;
+  }
+
+  .mobile-opponent-summary-pieces {
+    gap: 0.1rem;
+  }
+
+  .mobile-opponent-summary-piece {
+    min-width: 1.35rem;
+  }
+}
+
+@media (max-height: 760px) {
+  .app-safe-shell:has(.mobile-ultra-compact-shell) {
+    padding-top: max(0.45rem, var(--safe-top));
+    padding-bottom: max(0.45rem, var(--safe-bottom));
+  }
+
+  .mobile-ultra-compact-header {
+    gap: 0.25rem;
+  }
+
+  .mobile-ultra-compact-button {
+    height: 2rem;
+    border-radius: 0.85rem;
+  }
+
+  .mobile-ultra-compact-title {
+    font-size: 1.65rem;
+  }
+
+  .mobile-ultra-compact-badge {
+    margin-top: 0.375rem;
+  }
+
+  .mobile-ultra-compact-status {
+    margin-bottom: 0.375rem;
+  }
+
+  .mobile-ultra-compact-status > div {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    font-size: 0.5rem;
+    letter-spacing: 0.08em;
+  }
+
+  .mobile-ultra-compact-board {
+    border-width: 3px;
+    border-radius: 1rem;
+    padding: 0.35rem;
+  }
+
+  .mobile-ultra-compact-piece {
+    transform: scale(0.8);
+  }
+
+  .mobile-ultra-compact-piece .chess-piece-direction-indicator,
+  .mobile-ultra-compact-tray-piece .chess-piece-direction-indicator,
+  .mobile-opponent-summary-piece .chess-piece-direction-indicator {
+    top: 0.2rem;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    border-radius: 0;
+    font-size: 0.96rem;
+    line-height: 1;
+  }
+
+  .mobile-ultra-compact-index {
+    bottom: 0.15rem;
+    right: 0.45rem;
+    font-size: 0.4rem;
+  }
+
+  .mobile-ultra-compact-tray {
+    min-height: 5.2rem;
+    padding: 0.4rem;
+  }
+
+  .mobile-ultra-compact-tray-title {
+    font-size: 0.46rem;
+  }
+
+  .mobile-ultra-compact-tray-status {
+    font-size: 0.42rem;
+  }
+
+  .mobile-ultra-compact-tray-grid-wrap {
+    min-height: 3.15rem;
+    margin-top: 0.2rem;
+    padding-bottom: 0;
+  }
+
+  .mobile-ultra-compact-tray-grid {
+    gap: 0.2rem;
+    padding-left: 0.15rem;
+    padding-right: 0.15rem;
+  }
+
+  .mobile-ultra-compact-tray-piece {
+    padding: 0.1rem;
+  }
+
+  .mobile-ultra-compact-tray-piece svg,
+  .mobile-ultra-compact-tray-piece [class*='text-'] {
+    line-height: 1;
+  }
+
+  .mobile-ultra-compact-bottom-shell {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+  }
+
+  .mobile-ultra-compact-bottom-text {
+    font-size: 0.65rem;
+  }
+
+  .mobile-ultra-compact-bottom-meta {
+    font-size: 0.48rem;
+  }
+
+  .mobile-ultra-compact-bottom-button {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+    font-size: 0.62rem;
+  }
+}
+
+@media (max-height: 749px) {
+  .mobile-standard-bottom-status {
+    display: none;
+  }
+
+  .mobile-very-short-bottom-status {
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  .mobile-current-hand-with-overlay .mobile-ultra-compact-tray {
+    padding-bottom: 2.9rem;
+  }
+
+  .mobile-hand-overlay-action {
+    position: absolute;
+    left: 0.65rem;
+    right: 0.65rem;
+    bottom: 0.6rem;
+    z-index: 20;
+    display: block;
+  }
+}
+
+@media (min-height: 750px) {
+  .mobile-very-short-bottom-status {
+    display: none;
+  }
+}
+
 @media (min-width: 640px) {
   .app-safe-shell {
     padding-top: max(1.25rem, var(--safe-top));

@@ -866,7 +866,7 @@ function OnlineCreateScreen({ values, isSubmitting, flashMessage, onChange, onSu
       hideEyebrow
       compactMobileHeader
     >
-      <form className="mt-5 flex h-full min-h-0 flex-col gap-4" onSubmit={onSubmit}>
+      <form className="compact-height-scroll mt-5 flex h-full min-h-0 flex-col gap-4" onSubmit={onSubmit}>
         <TextInput
           label="Your Name"
           value={values.createName}
@@ -1167,12 +1167,13 @@ function GameScreen({
   const mobileBottomHandIsActive = mobileHandPlayer === currentTurn && !winner;
   const mobileTopHandIsActive = mobileOpponentPlayer === currentTurn && !winner;
   const compactMobileEndgame = Boolean(winner && showMobileHands);
-  const mobileHeaderButtonClass = 'h-10 w-full justify-center overflow-hidden rounded-[1rem] px-0 py-0 text-[9px] tracking-[0.04em] !border-slate-600/80 !from-slate-800 !to-slate-950 !shadow-none hover:scale-100 active:scale-100 sm:h-auto sm:px-3 sm:py-2 sm:text-[10px]';
+  const showTinyScreenOverlayAction = Boolean(primaryActionLabel && showMobileHands);
+  const mobileHeaderButtonClass = 'mobile-ultra-compact-button h-10 w-full justify-center overflow-hidden rounded-[1rem] px-0 py-0 text-[9px] tracking-[0.04em] !border-slate-600/80 !from-slate-800 !to-slate-950 !shadow-none hover:scale-100 active:scale-100 sm:h-auto sm:px-3 sm:py-2 sm:text-[10px]';
 
   return (
-    <div className="flex h-full min-h-0 w-full self-stretch flex-col overflow-hidden">
+    <div className="mobile-ultra-compact-shell flex h-full min-h-0 w-full self-stretch flex-col overflow-hidden">
       <div className="mx-auto flex h-full w-full max-w-[1450px] min-h-0 flex-1 flex-col gap-2 md:gap-4">
-        <div className="flex-shrink-0 md:hidden">
+        <div className="mobile-ultra-compact-header flex-shrink-0 md:hidden">
           <div className="grid grid-cols-[2.7rem_1fr_2.7rem] items-center gap-2 sm:grid-cols-[4.4rem_1fr_4.4rem] sm:gap-2">
             <ActionButton
               onClick={onBack}
@@ -1183,7 +1184,7 @@ function GameScreen({
               <span aria-hidden="true" className="text-base leading-none sm:text-sm">←</span>
               <span className="sr-only sm:not-sr-only sm:ml-1">Menu</span>
             </ActionButton>
-            <h1 className="justify-self-center text-center text-[1.95rem] font-black leading-none tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 drop-shadow-lg sm:text-[4.75rem]">
+            <h1 className="mobile-ultra-compact-title justify-self-center text-center text-[1.95rem] font-black leading-none tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 drop-shadow-lg sm:text-[4.75rem]">
               TIC TAC CHEC
             </h1>
             {copyCode && onCopyCode ? (
@@ -1201,7 +1202,7 @@ function GameScreen({
             )}
           </div>
           {socketStatus && (
-            <div className="mt-1.5 flex justify-center">
+            <div className="mobile-ultra-compact-badge mt-1.5 flex justify-center">
               <ConnectionBadge status={socketStatus} copyNotice={copyNotice} />
             </div>
           )}
@@ -1230,7 +1231,7 @@ function GameScreen({
 
         <div className="flex min-h-0 flex-1 flex-col items-stretch gap-2 overflow-hidden pb-2 md:flex-row md:items-center md:justify-center md:gap-6 md:pb-4">
           {showMobileHands && (
-            <div className="w-full flex-shrink-0 self-stretch md:hidden">
+            <div className="mobile-opponent-hand w-full flex-shrink-0 self-stretch md:hidden">
               <HandDisplay
                 layout="tray"
                 title={`${mobileTopHandLabel}'s Hand`}
@@ -1238,6 +1239,19 @@ function GameScreen({
                 player={mobileOpponentPlayer}
                 isActive={mobileTopHandIsActive}
                 compact={compactMobileEndgame}
+                selectedPiece={selectedPiece}
+                onPieceClick={onHandPieceClick}
+              />
+            </div>
+          )}
+          {showMobileHands && (
+            <div className="mobile-opponent-summary w-full flex-shrink-0 self-stretch md:hidden">
+              <HandDisplay
+                layout="summary"
+                title={`${mobileTopHandLabel}'s Hand`}
+                pieces={mobileTopHandPieces}
+                player={mobileOpponentPlayer}
+                isActive={mobileTopHandIsActive}
                 selectedPiece={selectedPiece}
                 onPieceClick={onHandPieceClick}
               />
@@ -1256,7 +1270,7 @@ function GameScreen({
           </div>
 
           <div className={`z-10 flex min-h-0 w-full flex-1 self-stretch flex-col justify-center ${boardShellClassName}`}>
-            <div className="mb-1.5 flex w-full justify-center sm:mb-2">
+            <div className="mobile-ultra-compact-status mb-1.5 flex w-full justify-center sm:mb-2">
               <div
                 className={`w-full rounded-full font-black uppercase text-center leading-tight shadow-xl transition-all duration-500 ${
                   winner
@@ -1270,7 +1284,7 @@ function GameScreen({
               </div>
             </div>
 
-            <div className="relative grid w-full grid-cols-4 gap-0 overflow-hidden rounded-[1.2rem] border-4 border-slate-700/50 bg-blue-950 p-2.5 shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-sm sm:rounded-[1.4rem] sm:border-[5px] sm:p-3 md:rounded-3xl md:border-8 md:p-6">
+            <div className="mobile-ultra-compact-board relative grid w-full grid-cols-4 gap-0 overflow-hidden rounded-[1.2rem] border-4 border-slate-700/50 bg-blue-950 p-2.5 shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-sm sm:rounded-[1.4rem] sm:border-[5px] sm:p-3 md:rounded-3xl md:border-8 md:p-6">
               <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none mix-blend-overlay" />
               {board.map((piece, index) => {
                 const row = Math.floor(index / 4);
@@ -1291,7 +1305,7 @@ function GameScreen({
                     `}
                   >
                     {piece && (
-                      <div className={`${isSelected ? 'scale-105 sm:scale-110' : 'scale-[0.88] sm:scale-[0.95] md:scale-100'} transition-transform duration-300`}>
+                      <div className={`mobile-ultra-compact-piece ${isSelected ? 'scale-105 sm:scale-110' : 'scale-[0.88] sm:scale-[0.95] md:scale-100'} transition-transform duration-300`}>
                         <ChessPiece
                           type={piece.type}
                           player={piece.player}
@@ -1300,7 +1314,7 @@ function GameScreen({
                         />
                       </div>
                     )}
-                    <span className="absolute bottom-0.5 right-1 text-[8px] font-bold text-black/40 select-none font-mono sm:text-[9px] md:bottom-1 md:right-2 md:text-[10px]">
+                    <span className="mobile-ultra-compact-index absolute bottom-0.5 right-1 text-[8px] font-bold text-black/40 select-none font-mono sm:text-[9px] md:bottom-1 md:right-2 md:text-[10px]">
                       {index}
                     </span>
                   </div>
@@ -1310,7 +1324,20 @@ function GameScreen({
           </div>
 
           {showMobileHands && (
-            <div className="w-full flex-shrink-0 self-stretch md:hidden">
+            <div className={`mobile-current-hand relative w-full flex-shrink-0 self-stretch md:hidden ${showTinyScreenOverlayAction ? 'mobile-current-hand-with-overlay' : ''}`}>
+              {!primaryActionLabel && (
+                <div className="mobile-very-short-bottom-status md:hidden">
+                  <BottomStatusBar
+                    notice={bottomNotice}
+                    primaryActionLabel={primaryActionLabel}
+                    onPrimaryAction={onPrimaryAction}
+                    primaryActionDisabled={primaryActionDisabled}
+                    rematchState={showRematchReadiness ? rematchState : null}
+                    compactMobile={Boolean(winner)}
+                    ultraCompactMobile
+                  />
+                </div>
+              )}
               <HandDisplay
                 layout="tray"
                 title={`${mobileBottomHandLabel}'s Hand`}
@@ -1318,9 +1345,22 @@ function GameScreen({
                 player={mobileHandPlayer}
                 isActive={mobileBottomHandIsActive}
                 compact={compactMobileEndgame}
+                ultraCompact
                 selectedPiece={selectedPiece}
                 onPieceClick={onHandPieceClick}
               />
+              {showTinyScreenOverlayAction && onPrimaryAction && (
+                <div className="mobile-hand-overlay-action md:hidden">
+                  <ActionButton
+                    onClick={onPrimaryAction}
+                    tone="success"
+                    disabled={primaryActionDisabled}
+                    className="w-full px-4 py-2 text-[11px] tracking-[0.08em]"
+                  >
+                    {primaryActionLabel}
+                  </ActionButton>
+                </div>
+              )}
             </div>
           )}
 
@@ -1337,12 +1377,14 @@ function GameScreen({
         </div>
 
         <BottomStatusBar
+          className="mobile-standard-bottom-status"
           notice={bottomNotice}
           primaryActionLabel={primaryActionLabel}
           onPrimaryAction={onPrimaryAction}
           primaryActionDisabled={primaryActionDisabled}
           rematchState={showRematchReadiness ? rematchState : null}
           compactMobile={Boolean(winner)}
+          ultraCompactMobile
         />
       </div>
     </div>
@@ -1350,28 +1392,30 @@ function GameScreen({
 }
 
 function BottomStatusBar({
+  className = '',
   notice,
   primaryActionLabel,
   onPrimaryAction,
   primaryActionDisabled,
   rematchState,
   compactMobile = false,
+  ultraCompactMobile = false,
 }) {
   if (!primaryActionLabel && !notice && !rematchState) {
     return null;
   }
 
   return (
-    <div className={`mt-2 flex-shrink-0 rounded-[1.35rem] border border-white/10 bg-slate-950/75 shadow-[0_20px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:mt-4 sm:rounded-[1.75rem] sm:px-4 sm:py-3 ${compactMobile ? 'px-3 py-2' : 'px-3 py-2.5'}`}>
+    <div className={`mobile-ultra-compact-bottom mt-2 flex-shrink-0 rounded-[1.35rem] border border-white/10 bg-slate-950/75 shadow-[0_20px_60px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:mt-4 sm:rounded-[1.75rem] sm:px-4 sm:py-3 ${compactMobile ? 'px-3 py-2' : 'px-3 py-2.5'} ${ultraCompactMobile ? 'mobile-ultra-compact-bottom-shell' : ''} ${className}`}>
       <div className={`flex flex-col lg:flex-row lg:items-center lg:justify-between ${compactMobile ? 'gap-2' : 'gap-3'}`}>
         <div className="min-h-[1.5rem]">
           {notice && (
-            <p className={`font-semibold text-slate-100 sm:text-base ${compactMobile ? 'text-[11px]' : 'text-xs'}`}>
+            <p className={`mobile-ultra-compact-bottom-text font-semibold text-slate-100 sm:text-base ${compactMobile ? 'text-[11px]' : 'text-xs'}`}>
               {notice}
             </p>
           )}
           {rematchState && (
-            <p className={`uppercase tracking-[0.16em] text-slate-400 sm:text-xs sm:tracking-[0.2em] ${notice ? 'mt-1' : ''} ${compactMobile ? 'text-[9px]' : 'text-[10px]'}`}>
+            <p className={`mobile-ultra-compact-bottom-meta uppercase tracking-[0.16em] text-slate-400 sm:text-xs sm:tracking-[0.2em] ${notice ? 'mt-1' : ''} ${compactMobile ? 'text-[9px]' : 'text-[10px]'}`}>
               Rematch readiness: {Number(rematchState.whiteReady) + Number(rematchState.blackReady)} / 2
             </p>
           )}
@@ -1382,7 +1426,7 @@ function BottomStatusBar({
               onClick={onPrimaryAction}
               tone="success"
               disabled={primaryActionDisabled}
-              className={`w-full sm:w-auto ${compactMobile ? 'px-4 py-2 text-[11px] tracking-[0.08em] sm:text-sm' : ''}`}
+              className={`mobile-ultra-compact-bottom-button w-full sm:w-auto ${compactMobile ? 'px-4 py-2 text-[11px] tracking-[0.08em] sm:text-sm' : ''}`}
             >
               {primaryActionLabel}
             </ActionButton>
@@ -1545,7 +1589,48 @@ function HandDisplay({
   onPieceClick,
   layout = 'panel',
   compact = false,
+  ultraCompact = false,
 }) {
+  if (layout === 'summary') {
+    const summaryPieces = pieces.length > 0 ? pieces : [];
+
+    return (
+      <div
+        className={`
+          mobile-opponent-summary-card grid w-full grid-cols-[auto_1fr_auto] items-center rounded-[1rem] border bg-gradient-to-r px-3 py-2 shadow-lg
+          ${player === 'white' ? 'from-indigo-900/95 to-blue-950/95' : 'from-slate-800/95 to-gray-900/95'}
+          ${isActive ? 'border-yellow-400/80 shadow-[0_0_20px_rgba(250,204,21,0.16)]' : 'border-gray-700/50'}
+        `}
+      >
+        <p className="mobile-opponent-summary-title text-[10px] font-black uppercase tracking-[0.12em] text-gray-100">
+          {title}
+        </p>
+        <div className="mobile-opponent-summary-pieces flex w-full items-center justify-center gap-1">
+          {summaryPieces.length > 0 ? (
+            summaryPieces.map((piece, index) => (
+              <span
+                key={`${piece}-${index}`}
+                className="mobile-opponent-summary-piece flex items-center justify-center"
+              >
+                <ChessPiece
+                  type={piece}
+                  player={player}
+                  direction={piece === 'pawn' ? (player === 'white' ? -1 : 1) : undefined}
+                  iconClassName="text-[1.45rem]"
+                />
+              </span>
+            ))
+          ) : (
+            <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500">Empty</span>
+          )}
+        </div>
+        <span className={`mobile-opponent-summary-status text-[9px] font-black uppercase tracking-[0.12em] ${isActive ? 'text-yellow-300' : 'text-gray-400'}`}>
+          {isActive ? 'Ready' : 'Standby'}
+        </span>
+      </div>
+    );
+  }
+
   if (layout === 'tray') {
     const traySlots = [...pieces];
 
@@ -1556,7 +1641,7 @@ function HandDisplay({
     return (
       <div
         className={`
-          flex w-full flex-shrink-0 flex-col rounded-[1.15rem] border-2 bg-gradient-to-br shadow-xl sm:rounded-[1.35rem] sm:p-3
+          mobile-ultra-compact-tray flex w-full flex-shrink-0 flex-col rounded-[1.15rem] border-2 bg-gradient-to-br shadow-xl sm:rounded-[1.35rem] sm:p-3
           ${compact ? 'min-h-[6.75rem] p-2' : 'min-h-[8rem] p-2.5'}
           sm:min-h-[8.8rem]
           ${player === 'white' ? 'from-indigo-900 to-blue-950' : 'from-slate-800 to-gray-900'}
@@ -1564,15 +1649,15 @@ function HandDisplay({
         `}
       >
         <div className="flex items-center justify-between gap-3">
-          <h2 className={`font-black uppercase tracking-[0.14em] text-gray-100 drop-shadow-md sm:text-xs sm:tracking-[0.18em] ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
+          <h2 className={`mobile-ultra-compact-tray-title font-black uppercase tracking-[0.14em] text-gray-100 drop-shadow-md sm:text-xs sm:tracking-[0.18em] ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
             {title}
           </h2>
-          <span className={`font-black uppercase tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em] ${compact ? 'text-[8px]' : 'text-[9px]'} ${isActive ? 'text-yellow-300' : 'text-gray-400'}`}>
+          <span className={`mobile-ultra-compact-tray-status font-black uppercase tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em] ${compact ? 'text-[8px]' : 'text-[9px]'} ${isActive ? 'text-yellow-300' : 'text-gray-400'}`}>
             {isActive ? 'Ready' : 'Standby'}
           </span>
         </div>
-        <div className={`-mx-1 flex flex-1 pb-1 sm:mt-3 sm:min-h-[5.6rem] ${compact ? 'mt-1 min-h-[4.15rem]' : 'mt-2 min-h-[5rem]'}`}>
-          <div className={`grid w-full grid-cols-4 px-1 sm:gap-2 ${compact ? 'gap-1' : 'gap-1.5'}`}>
+        <div className={`mobile-ultra-compact-tray-grid-wrap -mx-1 flex flex-1 pb-1 sm:mt-3 sm:min-h-[5.6rem] ${compact ? 'mt-1 min-h-[4.15rem]' : 'mt-2 min-h-[5rem]'}`}>
+          <div className={`mobile-ultra-compact-tray-grid grid w-full grid-cols-4 px-1 sm:gap-2 ${compact ? 'gap-1' : 'gap-1.5'}`}>
             {traySlots.map((type, index) => {
               if (!type) {
                 return (
@@ -1593,15 +1678,16 @@ function HandDisplay({
                 <HandPieceButton
                   key={`${type}-${index}`}
                   type={type}
-                  player={player}
-                  isActive={isActive}
-                  isSelected={isSelected}
-                  onPieceClick={onPieceClick}
-                  layout="tray"
-                  compact={compact}
-                />
-              );
-            })}
+                    player={player}
+                    isActive={isActive}
+                    isSelected={isSelected}
+                    onPieceClick={onPieceClick}
+                    layout="tray"
+                    compact={compact}
+                    ultraCompact={ultraCompact}
+                  />
+                );
+              })}
           </div>
         </div>
       </div>
@@ -1611,16 +1697,18 @@ function HandDisplay({
   return (
     <div
       className={`
-        rounded-2xl border-2 bg-gradient-to-br p-4 shadow-xl transition-all duration-500 lg:p-5
+        rounded-2xl border-2 bg-gradient-to-br shadow-xl transition-all duration-500
+        ${compact ? 'p-3 lg:p-3.5' : 'p-4 lg:p-5'}
         ${player === 'white' ? 'from-indigo-900 to-blue-950' : 'from-slate-800 to-gray-900'}
         ${isActive ? 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.3)]' : 'border-gray-700/50'}
-        flex h-[460px] w-full flex-col justify-start md:h-[520px] lg:h-[560px]
+        flex w-full flex-col justify-start
+        ${compact ? 'h-[330px] md:h-[360px] lg:h-[390px]' : 'h-[460px] md:h-[520px] lg:h-[560px]'}
       `}
     >
-      <h2 className="mb-4 text-xs sm:text-sm font-black uppercase tracking-[0.2em] text-center text-gray-200 drop-shadow-md">
+      <h2 className={`font-black uppercase tracking-[0.2em] text-center text-gray-200 drop-shadow-md ${compact ? 'mb-2 text-[11px] sm:text-xs' : 'mb-4 text-xs sm:text-sm'}`}>
         {title}
       </h2>
-      <div className="flex flex-col gap-2 flex-1 justify-start pt-1">
+      <div className={`flex flex-1 flex-col justify-start ${compact ? 'gap-1.5 pt-0' : 'gap-2 pt-1'}`}>
         {pieces.map((type, index) => {
           const isSelected =
             selectedPiece?.type === type &&
@@ -1640,7 +1728,7 @@ function HandDisplay({
         })}
       </div>
       {pieces.length === 0 && (
-        <p className="text-center text-gray-500 text-sm italic py-4">
+        <p className={`text-center text-gray-500 italic ${compact ? 'py-2 text-xs' : 'py-4 text-sm'}`}>
           No pieces left
         </p>
       )}
@@ -1656,23 +1744,26 @@ function HandPieceButton({
   onPieceClick,
   layout = 'panel',
   compact = false,
+  ultraCompact = false,
 }) {
   const defaultPawnDirection = type === 'pawn'
     ? player === 'white' ? -1 : 1
     : undefined;
   const isTray = layout === 'tray';
   const baseClasses = isTray
-    ? `h-full w-full rounded-xl sm:px-3 sm:py-3 ${compact ? 'px-1.5 py-1.5' : 'px-2 py-2.5'}`
-    : 'overflow-hidden rounded-xl px-3 pb-2.5 pt-4 sm:pb-3 sm:pt-5';
+    ? `h-full w-full rounded-xl sm:px-3 sm:py-3 ${ultraCompact ? 'px-1 py-1' : compact ? 'px-1.5 py-1.5' : 'px-2 py-2.5'}`
+    : `overflow-hidden rounded-xl ${compact ? 'px-2.5 pb-2 pt-3 sm:px-3 sm:pb-2.5 sm:pt-4' : 'px-3 pb-2.5 pt-4 sm:pb-3 sm:pt-5'}`;
   const pieceScaleClasses = isTray
-    ? `drop-shadow-lg ${compact ? 'mb-0.5' : 'mb-1'}`
-    : 'mb-1 translate-y-1 drop-shadow-lg scale-100 sm:translate-y-1.5 sm:scale-110';
+    ? `drop-shadow-lg ${ultraCompact ? 'mb-0' : compact ? 'mb-0.5' : 'mb-1'}`
+    : compact
+      ? 'mb-0.5 translate-y-0.5 drop-shadow-lg scale-[0.92] sm:translate-y-1 sm:scale-100'
+      : 'mb-1 translate-y-1 drop-shadow-lg scale-100 sm:translate-y-1.5 sm:scale-110';
   const pieceIconClassName = isTray
-    ? compact ? 'text-[1.5rem] sm:text-[2.2rem]' : 'text-[1.85rem] sm:text-[2.2rem]'
-    : 'text-[2.35rem] sm:text-[3.05rem]';
+    ? ultraCompact ? 'text-[1.95rem] sm:text-[2.2rem]' : compact ? 'text-[1.5rem] sm:text-[2.2rem]' : 'text-[1.85rem] sm:text-[2.2rem]'
+    : compact ? 'text-[2rem] sm:text-[2.45rem]' : 'text-[2.35rem] sm:text-[3.05rem]';
   const labelClasses = isTray
-    ? compact ? 'mt-0.5 text-[8px] tracking-[0.1em] sm:text-[10px] sm:tracking-[0.16em]' : 'mt-1 text-[9px] tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em]'
-    : 'mt-2 text-[11px] sm:text-xs tracking-wider';
+    ? ultraCompact ? 'mt-0 text-[7px] tracking-[0.08em] sm:text-[10px] sm:tracking-[0.16em]' : compact ? 'mt-0.5 text-[8px] tracking-[0.1em] sm:text-[10px] sm:tracking-[0.16em]' : 'mt-1 text-[9px] tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em]'
+    : compact ? 'mt-1 text-[10px] sm:text-[11px] tracking-wider' : 'mt-2 text-[11px] sm:text-xs tracking-wider';
 
   return (
     <button
@@ -1680,9 +1771,10 @@ function HandPieceButton({
       onClick={() => onPieceClick(type, player)}
       disabled={!isActive}
       className={`
+        ${ultraCompact && isTray ? 'mobile-ultra-compact-tray-piece' : ''}
         ${baseClasses}
         flex flex-col items-center transition-all duration-300
-        ${isSelected ? 'scale-[1.02] bg-yellow-400/20 ring-4 ring-yellow-400 shadow-lg' : 'hover:scale-[1.01] hover:bg-white/10 hover:shadow-md'}
+        ${isSelected ? 'scale-[1.02] bg-yellow-400/20 ring-4 ring-yellow-400 shadow-lg' : `${compact ? 'hover:bg-white/10 hover:shadow-md' : 'hover:scale-[1.01] hover:bg-white/10 hover:shadow-md'}`}
         ${!isActive ? 'cursor-not-allowed opacity-50 grayscale-[0.5]' : 'cursor-pointer'}
       `}
     >
