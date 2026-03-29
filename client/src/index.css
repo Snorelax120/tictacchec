@@ -59,6 +59,10 @@ body {
   display: none;
 }
 
+.mobile-current-hand-summary {
+  display: none;
+}
+
 @media (max-height: 700px) {
   .compact-height-scroll {
     overflow-y: auto;
@@ -68,8 +72,16 @@ body {
   }
 }
 
-@media (max-height: 849px) {
+@media (max-height: 899px) {
   .mobile-opponent-hand {
+    display: none;
+  }
+
+  .mobile-online-compact-connection-badge {
+    display: none;
+  }
+
+  .mobile-online-compact-bottom-status {
     display: none;
   }
 
@@ -98,6 +110,82 @@ body {
 
   .mobile-opponent-summary-piece {
     min-width: 1.35rem;
+  }
+
+  .mobile-online-compact-hand-with-overlay .mobile-ultra-compact-tray {
+    padding-bottom: 2.9rem;
+  }
+
+  .mobile-online-compact-overlay-action {
+    position: absolute;
+    left: 0.65rem;
+    right: 0.65rem;
+    bottom: 0.6rem;
+    z-index: 20;
+    display: block;
+  }
+
+  .mobile-ultra-compact-piece .chess-piece-direction-indicator,
+  .mobile-ultra-compact-tray-piece .chess-piece-direction-indicator,
+  .mobile-opponent-summary-piece .chess-piece-direction-indicator {
+    top: 0.2rem;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    border-radius: 0;
+    font-size: 0.96rem;
+    line-height: 1;
+  }
+}
+
+@media (max-height: 599px) {
+  .mobile-current-hand-tray {
+    display: none;
+  }
+
+  .mobile-current-hand-summary {
+    display: block;
+  }
+
+  .mobile-current-hand-summary-card {
+    min-height: 3rem;
+    border-radius: 0.95rem;
+    padding: 0.35rem 0.55rem;
+    column-gap: 0.3rem;
+  }
+
+  .mobile-current-hand-summary-card .mobile-opponent-summary-title {
+    font-size: 0.44rem;
+  }
+
+  .mobile-current-hand-summary-card .mobile-opponent-summary-status {
+    font-size: 0.42rem;
+  }
+
+  .mobile-current-hand-summary-card .mobile-opponent-summary-pieces {
+    gap: 0.05rem;
+  }
+
+  .mobile-current-hand-summary-piece {
+    min-width: 1.5rem;
+    min-height: 1.75rem;
+    padding: 0.05rem;
+  }
+
+  .mobile-current-hand-summary-piece svg,
+  .mobile-current-hand-summary-piece [class*='text-'] {
+    line-height: 1;
+  }
+
+  .mobile-current-hand-compact-with-overlay .mobile-current-hand-summary-card {
+    padding-bottom: 2.8rem;
+  }
+
+  .mobile-current-hand-compact-with-overlay .mobile-hand-overlay-action {
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.45rem;
   }
 }
 
@@ -143,19 +231,6 @@ body {
 
   .mobile-ultra-compact-piece {
     transform: scale(0.8);
-  }
-
-  .mobile-ultra-compact-piece .chess-piece-direction-indicator,
-  .mobile-ultra-compact-tray-piece .chess-piece-direction-indicator,
-  .mobile-opponent-summary-piece .chess-piece-direction-indicator {
-    top: 0.2rem;
-    padding: 0;
-    background: transparent;
-    border: 0;
-    box-shadow: none;
-    border-radius: 0;
-    font-size: 0.96rem;
-    line-height: 1;
   }
 
   .mobile-ultra-compact-index {
@@ -215,6 +290,12 @@ body {
     padding-top: 0.45rem;
     padding-bottom: 0.45rem;
     font-size: 0.62rem;
+  }
+}
+
+@media (max-height: 564px) {
+  .mobile-opponent-summary {
+    display: none;
   }
 }
 

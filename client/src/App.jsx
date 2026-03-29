@@ -67,6 +67,34 @@ function getOnlineStatusMessage(snapshot) {
   return snapshot.statusMessage || `${getOnlinePlayerLabel(snapshot, snapshot.game.turn)} to move.`;
 }
 
+function getOnlineConnectionStatusInfo(participant) {
+  if (!participant) {
+    return {
+      label: 'Waiting',
+      toneClassName: 'text-slate-400',
+    };
+  }
+
+  if (participant.connected) {
+    return {
+      label: 'Connected',
+      toneClassName: 'text-emerald-300',
+    };
+  }
+
+  if (participant.reconnectDeadline) {
+    return {
+      label: 'Reconnecting',
+      toneClassName: 'text-amber-300',
+    };
+  }
+
+  return {
+    label: 'Offline',
+    toneClassName: 'text-rose-300',
+  };
+}
+
 function buildMoveFromSelection(board, selectedPiece, index) {
   if (!selectedPiece) {
     return null;
@@ -985,6 +1013,10 @@ function OnlineRoomScreen({
   const yourRematchReady = snapshot.yourSeat
     ? snapshot.rematch?.[snapshot.yourSeat === 'white' ? 'whiteReady' : 'blackReady']
     : false;
+  const playerStatusLabels = {
+    white: getOnlineConnectionStatusInfo(snapshot.players.white),
+    black: getOnlineConnectionStatusInfo(snapshot.players.black),
+  };
 
   return (
     <GameScreen
@@ -1015,6 +1047,8 @@ function OnlineRoomScreen({
       bottomNotice={flashMessage}
       rematchState={snapshot.rematch}
       mobileHandPlayer={snapshot.yourSeat || null}
+      playerStatusLabels={playerStatusLabels}
+      isOnlinePlay
     />
   );
 }
@@ -1135,6 +1169,8 @@ function GameScreen({
   bottomNotice,
   rematchState,
   mobileHandPlayer = null,
+  playerStatusLabels = null,
+  isOnlinePlay = false,
 }) {
   const showRematchReadiness = Boolean(winner && rematchState);
   const boardShellClassName = 'w-full max-w-none md:w-[35rem] md:max-w-[35rem] lg:w-[39rem] lg:max-w-[39rem]';
@@ -1163,11 +1199,15 @@ function GameScreen({
     : mobileOpponentPlayer === 'black'
       ? blackHand
       : [];
+  const mobileBottomHandStatus = mobileHandPlayer ? playerStatusLabels?.[mobileHandPlayer] ?? null : null;
+  const mobileTopHandStatus = mobileOpponentPlayer ? playerStatusLabels?.[mobileOpponentPlayer] ?? null : null;
   const showMobileHands = Boolean(mobileHandPlayer);
   const mobileBottomHandIsActive = mobileHandPlayer === currentTurn && !winner;
   const mobileTopHandIsActive = mobileOpponentPlayer === currentTurn && !winner;
   const compactMobileEndgame = Boolean(winner && showMobileHands);
   const showTinyScreenOverlayAction = Boolean(primaryActionLabel && showMobileHands);
+  const showCompactOnlineOverlayAction = Boolean(isOnlinePlay && primaryActionLabel && showMobileHands);
+  const showCompactCurrentHand = Boolean(showMobileHands);
   const mobileHeaderButtonClass = 'mobile-ultra-compact-button h-10 w-full justify-center overflow-hidden rounded-[1rem] px-0 py-0 text-[9px] tracking-[0.04em] !border-slate-600/80 !from-slate-800 !to-slate-950 !shadow-none hover:scale-100 active:scale-100 sm:h-auto sm:px-3 sm:py-2 sm:text-[10px]';
 
   return (
@@ -1202,7 +1242,7 @@ function GameScreen({
             )}
           </div>
           {socketStatus && (
-            <div className="mobile-ultra-compact-badge mt-1.5 flex justify-center">
+            <div className={`mobile-ultra-compact-badge mt-1.5 flex justify-center ${isOnlinePlay ? 'mobile-online-compact-connection-badge' : ''}`}>
               <ConnectionBadge status={socketStatus} copyNotice={copyNotice} />
             </div>
           )}
@@ -1238,6 +1278,8 @@ function GameScreen({
                 pieces={mobileTopHandPieces}
                 player={mobileOpponentPlayer}
                 isActive={mobileTopHandIsActive}
+                statusLabel={mobileTopHandStatus?.label}
+                statusToneClassName={mobileTopHandStatus?.toneClassName}
                 compact={compactMobileEndgame}
                 selectedPiece={selectedPiece}
                 onPieceClick={onHandPieceClick}
@@ -1252,6 +1294,8 @@ function GameScreen({
                 pieces={mobileTopHandPieces}
                 player={mobileOpponentPlayer}
                 isActive={mobileTopHandIsActive}
+                statusLabel={mobileTopHandStatus?.label}
+                statusToneClassName={mobileTopHandStatus?.toneClassName}
                 selectedPiece={selectedPiece}
                 onPieceClick={onHandPieceClick}
               />
@@ -1324,8 +1368,14 @@ function GameScreen({
           </div>
 
           {showMobileHands && (
-            <div className={`mobile-current-hand relative w-full flex-shrink-0 self-stretch md:hidden ${showTinyScreenOverlayAction ? 'mobile-current-hand-with-overlay' : ''}`}>
-              {!primaryActionLabel && (
+            <div
+              className={`mobile-current-hand relative w-full flex-shrink-0 self-stretch md:hidden ${
+                showTinyScreenOverlayAction ? 'mobile-current-hand-with-overlay' : ''
+              } ${showCompactOnlineOverlayAction ? 'mobile-online-compact-hand-with-overlay' : ''} ${
+                showTinyScreenOverlayAction && showCompactCurrentHand ? 'mobile-current-hand-compact-with-overlay' : ''
+              }`}
+            >
+              {!primaryActionLabel && !isOnlinePlay && (
                 <div className="mobile-very-short-bottom-status md:hidden">
                   <BottomStatusBar
                     notice={bottomNotice}
@@ -1338,19 +1388,37 @@ function GameScreen({
                   />
                 </div>
               )}
-              <HandDisplay
-                layout="tray"
-                title={`${mobileBottomHandLabel}'s Hand`}
-                pieces={mobileBottomHandPieces}
-                player={mobileHandPlayer}
-                isActive={mobileBottomHandIsActive}
-                compact={compactMobileEndgame}
-                ultraCompact
-                selectedPiece={selectedPiece}
-                onPieceClick={onHandPieceClick}
-              />
+              <div className="mobile-current-hand-tray">
+                <HandDisplay
+                  layout="tray"
+                  title={`${mobileBottomHandLabel}'s Hand`}
+                  pieces={mobileBottomHandPieces}
+                  player={mobileHandPlayer}
+                  isActive={mobileBottomHandIsActive}
+                  statusLabel={mobileBottomHandStatus?.label}
+                  statusToneClassName={mobileBottomHandStatus?.toneClassName}
+                  compact={compactMobileEndgame}
+                  ultraCompact
+                  selectedPiece={selectedPiece}
+                  onPieceClick={onHandPieceClick}
+                />
+              </div>
+              <div className="mobile-current-hand-summary">
+                <HandDisplay
+                  layout="summary"
+                  title={`${mobileBottomHandLabel}'s Hand`}
+                  pieces={mobileBottomHandPieces}
+                  player={mobileHandPlayer}
+                  isActive={mobileBottomHandIsActive}
+                  statusLabel={mobileBottomHandStatus?.label}
+                  statusToneClassName={mobileBottomHandStatus?.toneClassName}
+                  selectedPiece={selectedPiece}
+                  onPieceClick={onHandPieceClick}
+                  interactiveSummary
+                />
+              </div>
               {showTinyScreenOverlayAction && onPrimaryAction && (
-                <div className="mobile-hand-overlay-action md:hidden">
+                <div className={`mobile-hand-overlay-action md:hidden ${showCompactOnlineOverlayAction ? 'mobile-online-compact-overlay-action' : ''}`}>
                   <ActionButton
                     onClick={onPrimaryAction}
                     tone="success"
@@ -1377,7 +1445,7 @@ function GameScreen({
         </div>
 
         <BottomStatusBar
-          className="mobile-standard-bottom-status"
+          className={`mobile-standard-bottom-status ${isOnlinePlay ? 'mobile-online-compact-bottom-status' : ''}`}
           notice={bottomNotice}
           primaryActionLabel={primaryActionLabel}
           onPrimaryAction={onPrimaryAction}
@@ -1590,14 +1658,20 @@ function HandDisplay({
   layout = 'panel',
   compact = false,
   ultraCompact = false,
+  statusLabel = null,
+  statusToneClassName = '',
+  interactiveSummary = false,
 }) {
+  const resolvedStatusLabel = statusLabel || (isActive ? 'Ready' : 'Standby');
+  const resolvedStatusToneClassName = statusLabel ? statusToneClassName : isActive ? 'text-yellow-300' : 'text-gray-400';
+
   if (layout === 'summary') {
     const summaryPieces = pieces.length > 0 ? pieces : [];
 
     return (
       <div
         className={`
-          mobile-opponent-summary-card grid w-full grid-cols-[auto_1fr_auto] items-center rounded-[1rem] border bg-gradient-to-r px-3 py-2 shadow-lg
+          mobile-opponent-summary-card ${interactiveSummary ? 'mobile-current-hand-summary-card' : ''} grid w-full grid-cols-[auto_1fr_auto] items-center rounded-[1rem] border bg-gradient-to-r px-3 py-2 shadow-lg
           ${player === 'white' ? 'from-indigo-900/95 to-blue-950/95' : 'from-slate-800/95 to-gray-900/95'}
           ${isActive ? 'border-yellow-400/80 shadow-[0_0_20px_rgba(250,204,21,0.16)]' : 'border-gray-700/50'}
         `}
@@ -1608,24 +1682,49 @@ function HandDisplay({
         <div className="mobile-opponent-summary-pieces flex w-full items-center justify-center gap-1">
           {summaryPieces.length > 0 ? (
             summaryPieces.map((piece, index) => (
-              <span
-                key={`${piece}-${index}`}
-                className="mobile-opponent-summary-piece flex items-center justify-center"
-              >
-                <ChessPiece
-                  type={piece}
-                  player={player}
-                  direction={piece === 'pawn' ? (player === 'white' ? -1 : 1) : undefined}
-                  iconClassName="text-[1.45rem]"
-                />
-              </span>
+              interactiveSummary ? (
+                <button
+                  key={`${piece}-${index}`}
+                  type="button"
+                  onClick={() => onPieceClick(piece, player)}
+                  disabled={!isActive}
+                  className={`mobile-opponent-summary-piece mobile-current-hand-summary-piece flex items-center justify-center rounded-lg transition-all duration-300 ${
+                    selectedPiece?.type === piece &&
+                    selectedPiece?.player === player &&
+                    selectedPiece?.from === null
+                      ? 'bg-yellow-400/20 ring-2 ring-yellow-400 shadow-lg'
+                      : isActive
+                        ? 'hover:bg-white/10 hover:shadow-md'
+                        : 'cursor-not-allowed opacity-50 grayscale-[0.5]'
+                  }`}
+                >
+                  <ChessPiece
+                    type={piece}
+                    player={player}
+                    direction={piece === 'pawn' ? (player === 'white' ? -1 : 1) : undefined}
+                    iconClassName="text-[1.45rem]"
+                  />
+                </button>
+              ) : (
+                <span
+                  key={`${piece}-${index}`}
+                  className="mobile-opponent-summary-piece flex items-center justify-center"
+                >
+                  <ChessPiece
+                    type={piece}
+                    player={player}
+                    direction={piece === 'pawn' ? (player === 'white' ? -1 : 1) : undefined}
+                    iconClassName="text-[1.45rem]"
+                  />
+                </span>
+              )
             ))
           ) : (
             <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500">Empty</span>
           )}
         </div>
-        <span className={`mobile-opponent-summary-status text-[9px] font-black uppercase tracking-[0.12em] ${isActive ? 'text-yellow-300' : 'text-gray-400'}`}>
-          {isActive ? 'Ready' : 'Standby'}
+        <span className={`mobile-opponent-summary-status text-[9px] font-black uppercase tracking-[0.12em] ${resolvedStatusToneClassName}`}>
+          {resolvedStatusLabel}
         </span>
       </div>
     );
@@ -1652,8 +1751,8 @@ function HandDisplay({
           <h2 className={`mobile-ultra-compact-tray-title font-black uppercase tracking-[0.14em] text-gray-100 drop-shadow-md sm:text-xs sm:tracking-[0.18em] ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
             {title}
           </h2>
-          <span className={`mobile-ultra-compact-tray-status font-black uppercase tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em] ${compact ? 'text-[8px]' : 'text-[9px]'} ${isActive ? 'text-yellow-300' : 'text-gray-400'}`}>
-            {isActive ? 'Ready' : 'Standby'}
+          <span className={`mobile-ultra-compact-tray-status font-black uppercase tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em] ${compact ? 'text-[8px]' : 'text-[9px]'} ${resolvedStatusToneClassName}`}>
+            {resolvedStatusLabel}
           </span>
         </div>
         <div className={`mobile-ultra-compact-tray-grid-wrap -mx-1 flex flex-1 pb-1 sm:mt-3 sm:min-h-[5.6rem] ${compact ? 'mt-1 min-h-[4.15rem]' : 'mt-2 min-h-[5rem]'}`}>
