@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "npm --prefix client run build",
+    "test": "node --test shared/*.test.js",
     "deploy": "npm run build && wrangler deploy",
     "dev:client": "npm --prefix client run dev",
     "dev:worker": "wrangler dev",

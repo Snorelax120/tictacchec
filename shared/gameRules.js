@@ -32,6 +32,10 @@ export function createInitialGameState() {
   };
 }
 
+export function getOpponentColor(player) {
+  return player === 'white' ? 'black' : 'white';
+}
+
 export function cloneGameState(gameState) {
   return {
     board: gameState.board.map((piece) => (piece ? { ...piece } : null)),
@@ -186,6 +190,99 @@ export function checkWinner(board) {
   }
 
   return null;
+}
+
+export function isTerminalGameState(gameState) {
+  return Boolean(gameState?.winner);
+}
+
+export function generateLegalMoves(gameState, player = gameState?.turn) {
+  if (!gameState || !player || gameState.winner) {
+    return [];
+  }
+
+  const stateForPlayer = gameState.turn === player
+    ? gameState
+    : {
+      ...gameState,
+      turn: player,
+    };
+  const moves = [];
+  const uniqueHandPieces = [...new Set(stateForPlayer.hands[player] || [])];
+
+  for (const type of uniqueHandPieces) {
+    for (let to = 0; to < BOARD_SQUARES; to += 1) {
+      if (stateForPlayer.board[to] !== null) {
+        continue;
+      }
+
+      const move = {
+        player,
+        type,
+        from: null,
+        to,
+      };
+      const result = applyMoveToGameState(stateForPlayer, move);
+
+      if (result.ok) {
+        moves.push(move);
+      }
+    }
+  }
+
+  for (let from = 0; from < BOARD_SQUARES; from += 1) {
+    const piece = stateForPlayer.board[from];
+
+    if (!piece || piece.player !== player) {
+      continue;
+    }
+
+    for (let to = 0; to < BOARD_SQUARES; to += 1) {
+      const move = {
+        player,
+        type: piece.type,
+        from,
+        to,
+      };
+      const result = applyMoveToGameState(stateForPlayer, move);
+
+      if (result.ok) {
+        moves.push(move);
+      }
+    }
+  }
+
+  return moves;
+}
+
+function serializePiece(piece) {
+  if (!piece) {
+    return '.';
+  }
+
+  const directionToken = piece.type === 'pawn'
+    ? piece.direction === undefined
+      ? 'n'
+      : piece.direction > 0
+        ? 'd'
+        : 'u'
+    : 'x';
+
+  return `${piece.player[0]}${piece.type[0]}${directionToken}`;
+}
+
+export function serializeGameState(gameState) {
+  const boardToken = gameState.board.map(serializePiece).join('|');
+  const whiteHand = [...gameState.hands.white].sort().join(',');
+  const blackHand = [...gameState.hands.black].sort().join(',');
+
+  return [
+    gameState.turn,
+    gameState.winner || '-',
+    boardToken,
+    `w:${whiteHand}`,
+    `b:${blackHand}`,
+  ].join('::');
 }
 
 export function applyMoveToGameState(currentState, move) {

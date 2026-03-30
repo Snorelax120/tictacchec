@@ -63,6 +63,32 @@ body {
   display: none;
 }
 
+.mobile-ultra-compact-tray-default {
+  padding-top: 1.1rem;
+}
+
+.mobile-ultra-compact-tray-title-default {
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
+.mobile-ultra-compact-tray-grid-wrap-default {
+  margin-top: 1.25rem;
+}
+
+.mobile-ultra-compact-tray-compact {
+  padding-top: 1rem;
+}
+
+.mobile-ultra-compact-tray-title-compact {
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.mobile-ultra-compact-tray-grid-wrap-compact {
+  margin-top: 1.2rem;
+}
+
 @media (max-height: 700px) {
   .compact-height-scroll {
     overflow-y: auto;
@@ -90,14 +116,14 @@ body {
   }
 
   .mobile-opponent-summary-card {
-    min-height: 2.9rem;
+    min-height: 4.15rem;
     border-radius: 0.95rem;
-    padding: 0.4rem 0.65rem;
+    padding: 0.55rem 0.8rem 0.45rem;
     column-gap: 0.35rem;
   }
 
   .mobile-opponent-summary-title {
-    font-size: 0.48rem;
+    font-size: 0.84rem;
   }
 
   .mobile-opponent-summary-status {
@@ -139,7 +165,7 @@ body {
   }
 }
 
-@media (max-height: 599px) {
+@media (max-height: 710px) {
   .mobile-current-hand-tray {
     display: none;
   }
@@ -149,27 +175,27 @@ body {
   }
 
   .mobile-current-hand-summary-card {
-    min-height: 3rem;
+    min-height: 4.15rem;
     border-radius: 0.95rem;
-    padding: 0.35rem 0.55rem;
-    column-gap: 0.3rem;
+    padding: 0.55rem 0.8rem 0.45rem;
+    column-gap: 0.35rem;
   }
 
   .mobile-current-hand-summary-card .mobile-opponent-summary-title {
-    font-size: 0.44rem;
+    font-size: 0.84rem;
   }
 
   .mobile-current-hand-summary-card .mobile-opponent-summary-status {
-    font-size: 0.42rem;
+    font-size: 0.44rem;
   }
 
   .mobile-current-hand-summary-card .mobile-opponent-summary-pieces {
-    gap: 0.05rem;
+    gap: 0.1rem;
   }
 
   .mobile-current-hand-summary-piece {
-    min-width: 1.5rem;
-    min-height: 1.75rem;
+    min-width: 1.35rem;
+    min-height: 2rem;
     padding: 0.05rem;
   }
 
@@ -217,9 +243,11 @@ body {
   }
 
   .mobile-ultra-compact-status > div {
-    padding-top: 0.3rem;
-    padding-bottom: 0.3rem;
-    font-size: 0.5rem;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    font-size: 0.78rem;
     letter-spacing: 0.08em;
   }
 
@@ -241,11 +269,27 @@ body {
 
   .mobile-ultra-compact-tray {
     min-height: 5.2rem;
-    padding: 0.4rem;
+    padding: 0.55rem 0.4rem 0.4rem;
+  }
+
+  .mobile-ultra-compact-tray-default {
+    padding-top: 1rem;
+  }
+
+  .mobile-ultra-compact-tray-compact {
+    padding-top: 0.95rem;
   }
 
   .mobile-ultra-compact-tray-title {
-    font-size: 0.46rem;
+    font-size: 0.92rem;
+  }
+
+  .mobile-ultra-compact-tray-title-default {
+    font-size: 0.95rem;
+  }
+
+  .mobile-ultra-compact-tray-title-compact {
+    font-size: 0.92rem;
   }
 
   .mobile-ultra-compact-tray-status {
@@ -254,8 +298,16 @@ body {
 
   .mobile-ultra-compact-tray-grid-wrap {
     min-height: 3.15rem;
-    margin-top: 0.2rem;
+    margin-top: 0.45rem;
     padding-bottom: 0;
+  }
+
+  .mobile-ultra-compact-tray-grid-wrap-default {
+    margin-top: 1.15rem;
+  }
+
+  .mobile-ultra-compact-tray-grid-wrap-compact {
+    margin-top: 1.1rem;
   }
 
   .mobile-ultra-compact-tray-grid {
@@ -293,13 +345,65 @@ body {
   }
 }
 
-@media (max-height: 564px) {
+@media (max-height: 625px) {
   .mobile-opponent-summary {
     display: none;
   }
 }
 
 @media (max-height: 749px) {
+  body {
+    overflow-y: auto;
+  }
+
+  .app-shell {
+    height: auto;
+    min-height: var(--app-height);
+    overflow-y: auto;
+  }
+
+  .app-safe-shell {
+    min-height: var(--app-height);
+    height: auto;
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .menu-screen-shell,
+  .center-card-shell {
+    height: auto;
+    min-height: 100%;
+    align-items: flex-start;
+    padding-top: 0;
+  }
+
+  .menu-screen-frame,
+  .center-card-frame {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .menu-screen-card,
+  .center-card-frame {
+    height: auto;
+    min-height: calc(var(--app-height) - max(1.5rem, var(--safe-top) + var(--safe-bottom)));
+    overflow: visible;
+  }
+
+  .menu-screen-content {
+    height: auto;
+    min-height: unset;
+    flex: 1 0 auto;
+  }
+
+  .compact-height-scroll,
+  .app-scroll-panel {
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
   .mobile-standard-bottom-status {
     display: none;
   }
@@ -320,6 +424,40 @@ body {
     bottom: 0.6rem;
     z-index: 20;
     display: block;
+  }
+}
+
+@media (min-height: 600px) and (max-height: 749px) {
+  body:has(.mobile-ultra-compact-shell) {
+    overflow-y: hidden;
+  }
+
+  .app-shell:has(.mobile-ultra-compact-shell) {
+    height: var(--app-height);
+    min-height: var(--app-height);
+    overflow-y: hidden;
+  }
+
+  .app-safe-shell:has(.mobile-ultra-compact-shell) {
+    height: var(--app-height);
+    min-height: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 450px) {
+  .app-safe-shell {
+    padding-right: max(0.35rem, var(--safe-right));
+    padding-left: max(0.35rem, var(--safe-left));
+  }
+
+  .menu-screen-card,
+  .center-card-frame {
+    border-radius: 1.5rem;
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
   }
 }
 

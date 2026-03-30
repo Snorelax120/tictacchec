@@ -39,8 +39,52 @@ const ONLINE_DEFAULTS = {
   joinCode: '',
 };
 
+const BOT_DEFAULTS = {
+  difficulty: 'medium',
+  seatChoice: 'white',
+};
+
+const BOT_DIFFICULTY_LABELS = {
+  easy: 'Easy',
+  medium: 'Medium',
+  hard: 'Hard',
+};
+
 function getLocalPlayerLabel(color) {
   return color === 'white' ? 'White' : 'Black';
+}
+
+function getResolvedBotSeats(seatChoice) {
+  const humanSeat = seatChoice === 'random'
+    ? Math.random() > 0.5 ? 'white' : 'black'
+    : seatChoice;
+
+  return {
+    humanSeat,
+    botSeat: humanSeat === 'white' ? 'black' : 'white',
+  };
+}
+
+function getBotPlayerLabel(botMatch, color) {
+  if (!botMatch) {
+    return getLocalPlayerLabel(color);
+  }
+
+  return color === botMatch.humanSeat
+    ? 'You'
+    : `${BOT_DIFFICULTY_LABELS[botMatch.difficulty]} Bot`;
+}
+
+function getBotStatusMessage(botGame, botMatch) {
+  if (!botMatch) {
+    return 'Set up your bot match.';
+  }
+
+  if (botGame.winner) {
+    return `${getBotPlayerLabel(botMatch, botGame.winner)} wins the game.`;
+  }
+
+  return `${getBotPlayerLabel(botMatch, botGame.turn)} to move.`;
 }
 
 function getOnlinePlayerLabel(snapshot, color) {
@@ -160,6 +204,12 @@ function App() {
   const [activeScreen, setActiveScreen] = useState('menu');
   const [localGame, setLocalGame] = useState(createInitialGameState);
   const [selectedLocalPiece, setSelectedLocalPiece] = useState(null);
+  const [botForms, setBotForms] = useState(BOT_DEFAULTS);
+  const [botGame, setBotGame] = useState(createInitialGameState);
+  const [selectedBotPiece, setSelectedBotPiece] = useState(null);
+  const [botMatch, setBotMatch] = useState(null);
+  const [botFlashMessage, setBotFlashMessage] = useState('');
+  const [isBotThinking, setIsBotThinking] = useState(false);
   const [onlineForms, setOnlineForms] = useState(ONLINE_DEFAULTS);
   const [onlineSession, setOnlineSession] = useState(null);
   const [onlineSnapshot, setOnlineSnapshot] = useState(null);
@@ -172,6 +222,12 @@ function App() {
   const socketRef = useRef(null);
   const reconnectTimerRef = useRef(null);
   const manualDisconnectRef = useRef(false);
+  const botWorkerRef = useRef(null);
+  const activeBotRequestIdRef = useRef(0);
+  const botRequestSequenceRef = useRef(0);
+  const botMoveDelayTimerRef = useRef(null);
+  const latestBotGameRef = useRef(botGame);
+  const latestBotMatchRef = useRef(botMatch);
 
   useEffect(() => {
     const restoredSession = loadActiveOnlineSession();
@@ -181,6 +237,81 @@ function App() {
       setActiveScreen('online-room');
       setOnlineFlashMessage('Restoring your online lobby...');
     }
+  }, []);
+
+  useEffect(() => {
+    latestBotGameRef.current = botGame;
+  }, [botGame]);
+
+  useEffect(() => {
+    latestBotMatchRef.current = botMatch;
+  }, [botMatch]);
+
+  useEffect(() => {
+    const worker = new Worker(new URL('./botWorker.js', import.meta.url), { type: 'module' });
+    botWorkerRef.current = worker;
+
+    const handleMessage = (event) => {
+      const { requestId, move, error } = event.data || {};
+
+      if (requestId !== activeBotRequestIdRef.current) {
+        return;
+      }
+
+      if (error) {
+        activeBotRequestIdRef.current = 0;
+        setIsBotThinking(false);
+        setBotFlashMessage(error);
+        return;
+      }
+
+      if (botMoveDelayTimerRef.current) {
+        window.clearTimeout(botMoveDelayTimerRef.current);
+      }
+
+      botMoveDelayTimerRef.current = window.setTimeout(() => {
+        botMoveDelayTimerRef.current = null;
+
+        if (requestId !== activeBotRequestIdRef.current) {
+          return;
+        }
+
+        const currentMatch = latestBotMatchRef.current;
+        const currentGame = latestBotGameRef.current;
+        activeBotRequestIdRef.current = 0;
+        setIsBotThinking(false);
+
+        if (!currentMatch || !currentGame || currentGame.winner || currentGame.turn !== currentMatch.botSeat) {
+          return;
+        }
+
+        const result = applyMoveToGameState(currentGame, move);
+
+        if (!result.ok) {
+          setBotFlashMessage('Bot move failed to apply.');
+          return;
+        }
+
+        setSelectedBotPiece(null);
+        setBotFlashMessage('');
+        setBotGame(result.state);
+      }, 1000);
+    };
+
+    worker.addEventListener('message', handleMessage);
+
+    return () => {
+      activeBotRequestIdRef.current = 0;
+      if (botMoveDelayTimerRef.current) {
+        window.clearTimeout(botMoveDelayTimerRef.current);
+        botMoveDelayTimerRef.current = null;
+      }
+      worker.removeEventListener('message', handleMessage);
+      worker.terminate();
+      if (botWorkerRef.current === worker) {
+        botWorkerRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -268,18 +399,66 @@ function App() {
     };
   }, [onlineSession, reconnectNonce]);
 
+  useEffect(() => {
+    if (
+      activeScreen !== 'game-bot' ||
+      !botMatch ||
+      !botWorkerRef.current ||
+      isBotThinking ||
+      botGame.winner ||
+      botGame.turn !== botMatch.botSeat
+    ) {
+      return;
+    }
+
+    const requestId = botRequestSequenceRef.current + 1;
+    botRequestSequenceRef.current = requestId;
+    activeBotRequestIdRef.current = requestId;
+    setIsBotThinking(true);
+
+    botWorkerRef.current.postMessage({
+      requestId,
+      gameState: botGame,
+      player: botMatch.botSeat,
+      difficulty: botMatch.difficulty,
+    });
+  }, [activeScreen, botGame, botMatch, isBotThinking]);
+
   const resetLocalGame = () => {
     setLocalGame(createInitialGameState());
     setSelectedLocalPiece(null);
   };
 
+  const resetBotRequest = () => {
+    if (botMoveDelayTimerRef.current) {
+      window.clearTimeout(botMoveDelayTimerRef.current);
+      botMoveDelayTimerRef.current = null;
+    }
+    activeBotRequestIdRef.current = 0;
+    setIsBotThinking(false);
+  };
+
+  const resetBotGame = () => {
+    resetBotRequest();
+    setBotGame(createInitialGameState());
+    setSelectedBotPiece(null);
+    setBotFlashMessage('');
+  };
+
   const openMenu = () => {
+    resetBotRequest();
     setActiveScreen('menu');
   };
 
   const startLocalGame = () => {
     resetLocalGame();
     setActiveScreen('game-local');
+  };
+
+  const openBotSetup = () => {
+    resetBotRequest();
+    setBotFlashMessage('');
+    setActiveScreen('bot-setup');
   };
 
   const openRules = () => {
@@ -293,6 +472,13 @@ function App() {
 
   const updateOnlineForm = (key, value) => {
     setOnlineForms((currentValue) => ({
+      ...currentValue,
+      [key]: value,
+    }));
+  };
+
+  const updateBotForm = (key, value) => {
+    setBotForms((currentValue) => ({
       ...currentValue,
       [key]: value,
     }));
@@ -405,6 +591,22 @@ function App() {
     }
   };
 
+  const handleStartBotGame = (event) => {
+    event.preventDefault();
+    const { humanSeat, botSeat } = getResolvedBotSeats(botForms.seatChoice);
+
+    resetBotRequest();
+    setBotGame(createInitialGameState());
+    setSelectedBotPiece(null);
+    setBotFlashMessage('');
+    setBotMatch({
+      difficulty: botForms.difficulty,
+      humanSeat,
+      botSeat,
+    });
+    setActiveScreen('game-bot');
+  };
+
   const handleLocalSquareClick = (index) => {
     if (localGame.winner) {
       return;
@@ -466,6 +668,76 @@ function App() {
     }
 
     setSelectedLocalPiece({ type, player, from: null });
+  };
+
+  const handleBotSquareClick = (index) => {
+    if (!botMatch || botGame.winner || isBotThinking || botGame.turn !== botMatch.humanSeat) {
+      return;
+    }
+
+    const board = botGame.board;
+    const clickedPiece = board[index];
+
+    if (!selectedBotPiece) {
+      if (clickedPiece && clickedPiece.player === botMatch.humanSeat) {
+        setSelectedBotPiece({
+          type: clickedPiece.type,
+          player: clickedPiece.player,
+          from: index,
+        });
+      }
+      return;
+    }
+
+    const nextMove = buildMoveFromSelection(board, selectedBotPiece, index);
+
+    if (nextMove === 'clear') {
+      setSelectedBotPiece(null);
+      return;
+    }
+
+    if (nextMove?.reselection) {
+      setSelectedBotPiece({
+        type: nextMove.type,
+        player: nextMove.player,
+        from: nextMove.from,
+      });
+      return;
+    }
+
+    if (!nextMove) {
+      setSelectedBotPiece(null);
+      return;
+    }
+
+    const result = applyMoveToGameState(botGame, nextMove);
+    if (!result.ok) {
+      setSelectedBotPiece(null);
+      return;
+    }
+
+    setBotGame(result.state);
+    setSelectedBotPiece(null);
+    setBotFlashMessage('');
+  };
+
+  const handleBotHandPieceClick = (type, player) => {
+    if (
+      !botMatch ||
+      botGame.winner ||
+      isBotThinking ||
+      player !== botMatch.humanSeat ||
+      botGame.turn !== botMatch.humanSeat
+    ) {
+      return;
+    }
+
+    if (selectedBotPiece?.type === type && selectedBotPiece?.player === player && selectedBotPiece?.from === null) {
+      setSelectedBotPiece(null);
+      return;
+    }
+
+    setSelectedBotPiece({ type, player, from: null });
   };
 
   const sendOnlineMessage = (payload) => {
@@ -554,9 +826,19 @@ function App() {
     setActiveScreen(nextScreen);
   };
 
+  const leaveBotGame = (nextScreen = 'menu') => {
+    resetBotRequest();
+    setSelectedBotPiece(null);
+    setBotFlashMessage('');
+    setActiveScreen(nextScreen);
+  };
+
   const localStatusMessage = localGame.winner
     ? `${getLocalPlayerLabel(localGame.winner)} wins the game.`
     : `${getLocalPlayerLabel(localGame.turn)} to move.`;
+  const botStatusMessage = getBotStatusMessage(botGame, botMatch);
+  const botWhiteLabel = getBotPlayerLabel(botMatch, 'white');
+  const botBlackLabel = getBotPlayerLabel(botMatch, 'black');
 
   return (
     <div className="app-shell relative w-full overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -568,6 +850,7 @@ function App() {
         {activeScreen === 'menu' && (
           <MenuScreen
             onPlayOverBoard={startLocalGame}
+            onPlayBot={openBotSetup}
             onOpenRules={openRules}
             onPlayOnline={openOnlineHome}
             hasActiveSession={!!onlineSession}
@@ -595,6 +878,38 @@ function App() {
             primaryActionLabel={localGame.winner ? 'Play Again' : null}
             getPawnDirection={getPawnDisplayDirection}
             mobileHandPlayer={localGame.turn}
+          />
+        )}
+
+        {activeScreen === 'bot-setup' && (
+          <BotSetupScreen
+            values={botForms}
+            onChange={updateBotForm}
+            onSubmit={handleStartBotGame}
+            onBack={openMenu}
+          />
+        )}
+
+        {activeScreen === 'game-bot' && (
+          <GameScreen
+            board={botGame.board}
+            currentTurn={botGame.turn}
+            selectedPiece={selectedBotPiece}
+            winner={botGame.winner}
+            blackHand={botGame.hands.black}
+            whiteHand={botGame.hands.white}
+            blackLabel={botBlackLabel}
+            whiteLabel={botWhiteLabel}
+            topStatus={botStatusMessage}
+            onSquareClick={handleBotSquareClick}
+            onHandPieceClick={handleBotHandPieceClick}
+            onBack={() => leaveBotGame('menu')}
+            onPrimaryAction={botGame.winner ? resetBotGame : null}
+            primaryActionLabel={botGame.winner ? 'Play Again' : null}
+            primaryActionDisabled={isBotThinking}
+            getPawnDirection={getPawnDisplayDirection}
+            bottomNotice={botFlashMessage}
+            mobileHandPlayer={botMatch?.humanSeat || 'white'}
           />
         )}
 
@@ -653,17 +968,18 @@ function App() {
 
 function MenuScreen({
   onPlayOverBoard,
+  onPlayBot,
   onOpenRules,
   onPlayOnline,
   hasActiveSession,
   onResumeOnline,
 }) {
   return (
-    <div className="flex h-full min-h-0 w-full items-center justify-center">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-[900px]">
-        <section className="relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8 lg:p-10">
+    <div className="menu-screen-shell flex h-full min-h-0 w-full items-center justify-center">
+      <div className="menu-screen-frame mx-auto flex h-full min-h-0 w-full max-w-[900px]">
+        <section className="menu-screen-card relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/70 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8 lg:p-10">
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 via-transparent to-blue-500/10 pointer-events-none" />
-          <div className="relative flex min-h-0 flex-1 flex-col justify-between gap-4 py-1 sm:gap-6 sm:py-0">
+          <div className="menu-screen-content relative flex min-h-0 flex-1 flex-col justify-between gap-4 py-1 sm:gap-6 sm:py-0">
             <div className="mx-auto w-full max-w-2xl flex-shrink text-center">
               <h1 className="text-center text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-600 drop-shadow-lg sm:text-7xl lg:text-8xl">
                 TIC TAC CHEC
@@ -682,6 +998,12 @@ function MenuScreen({
                 description="Start a local two-player match with the full gameboard experience."
                 tone="cyan"
                 onClick={onPlayOverBoard}
+              />
+              <MenuButton
+                title="Play vs Bot"
+                description="Pick a difficulty, choose your color, and play a browser-side bot with no server wait."
+                tone="teal"
+                onClick={onPlayBot}
               />
               <MenuButton
                 title="Play Online"
@@ -893,6 +1215,7 @@ function OnlineCreateScreen({ values, isSubmitting, flashMessage, onChange, onSu
       onBack={onBack}
       hideEyebrow
       compactMobileHeader
+      desktopCenteredHeader
     >
       <form className="compact-height-scroll mt-5 flex h-full min-h-0 flex-col gap-4" onSubmit={onSubmit}>
         <TextInput
@@ -928,6 +1251,7 @@ function OnlineJoinScreen({ values, isSubmitting, flashMessage, onChange, onSubm
       onBack={onBack}
       hideEyebrow
       compactMobileHeader
+      desktopCenteredHeader
     >
       <form className="mt-5 flex h-full min-h-0 flex-col gap-4" onSubmit={onSubmit}>
         <TextInput
@@ -951,6 +1275,38 @@ function OnlineJoinScreen({ values, isSubmitting, flashMessage, onChange, onSubm
           </ActionButton>
           <ActionButton tone="cyan" type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
             {isSubmitting ? 'Joining...' : 'Join Game'}
+          </ActionButton>
+        </div>
+      </form>
+    </CenterCard>
+  );
+}
+
+function BotSetupScreen({ values, onChange, onSubmit, onBack }) {
+  return (
+    <CenterCard
+      title="Play vs Bot"
+      description="Choose a difficulty, decide whether you want White, Black, or random, and let the bot run directly in your browser."
+      onBack={onBack}
+      hideEyebrow
+      compactMobileHeader
+      desktopBackLeft
+    >
+      <form className="mt-5 flex h-full min-h-0 flex-col gap-4" onSubmit={onSubmit}>
+        <BotDifficultyPicker
+          value={values.difficulty}
+          onChange={(value) => onChange('difficulty', value)}
+        />
+        <BotSeatPicker
+          value={values.seatChoice}
+          onChange={(value) => onChange('seatChoice', value)}
+        />
+        <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:justify-between">
+          <ActionButton onClick={onBack} tone="slate" type="button" className="w-full sm:w-auto">
+            Cancel
+          </ActionButton>
+          <ActionButton tone="cyan" type="submit" className="w-full sm:w-auto">
+            Start Bot Match
           </ActionButton>
         </div>
       </form>
@@ -1063,12 +1419,13 @@ function CenterCard({
   compactMobileHeader = false,
   contentClassName = '',
   desktopCenteredHeader = false,
+  desktopBackLeft = false,
 }) {
   const compactHeaderButtonClass = 'h-10 w-full justify-center overflow-hidden rounded-[1rem] px-0 py-0 text-[9px] tracking-[0.04em] !border-slate-600/80 !from-slate-800 !to-slate-950 !shadow-none hover:scale-100 active:scale-100 sm:h-auto sm:px-3 sm:py-2 sm:text-[10px]';
 
   return (
-    <div className="flex h-full min-h-0 w-full items-center justify-center">
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/80 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8">
+    <div className="center-card-shell flex h-full min-h-0 w-full items-center justify-center">
+      <div className="center-card-frame mx-auto flex h-full min-h-0 w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-900/80 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl sm:p-8">
         <div className="flex flex-shrink-0 flex-col gap-3">
           {compactMobileHeader ? (
             <div className="grid grid-cols-[2.7rem_1fr_2.7rem] items-center gap-2 md:hidden">
@@ -1108,27 +1465,69 @@ function CenterCard({
                   {description}
                 </p>
               </div>
-              <div />
+              <div className="flex justify-end">
+                <ActionButton
+                  tone="slate"
+                  className="invisible w-full flex-shrink-0 px-4 py-2 text-xs tracking-[0.08em] sm:w-auto sm:px-5 sm:text-sm"
+                  ariaLabel="Spacer"
+                >
+                  ← Menu
+                </ActionButton>
+              </div>
             </div>
           ) : null}
 
-          <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 ${compactMobileHeader ? 'hidden md:flex' : ''} ${desktopCenteredHeader ? 'md:hidden' : ''}`}>
-            <div>
-              {!hideEyebrow && eyebrow ? (
-                <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
-                  {eyebrow}
+          <div className={`flex flex-col gap-3 sm:gap-4 ${desktopBackLeft ? 'sm:items-start' : 'sm:flex-row sm:items-start sm:justify-between'} ${compactMobileHeader ? 'hidden md:flex' : ''} ${desktopCenteredHeader ? 'md:hidden' : ''}`}>
+            {desktopBackLeft ? (
+              <div className="flex w-full flex-col gap-4">
+                <div className="grid w-full grid-cols-[auto_1fr_auto] items-start gap-4">
+                  <ActionButton onClick={onBack} tone="slate" className="w-full flex-shrink-0 px-4 py-2 text-xs tracking-[0.08em] sm:w-auto sm:px-5 sm:text-sm">
+                    ← Menu
+                  </ActionButton>
+                  <div className="text-center">
+                    {!hideEyebrow && eyebrow ? (
+                      <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
+                        {eyebrow}
+                      </p>
+                    ) : null}
+                    <h1 className={`${hideEyebrow ? 'mt-0' : 'mt-2 sm:mt-3'} text-[1.65rem] font-black tracking-tight text-white sm:text-5xl`}>
+                      {title}
+                    </h1>
+                  </div>
+                  <div className="flex justify-end">
+                    <ActionButton
+                      tone="slate"
+                      className="invisible w-full flex-shrink-0 px-4 py-2 text-xs tracking-[0.08em] sm:w-auto sm:px-5 sm:text-sm"
+                      ariaLabel="Spacer"
+                    >
+                      ← Menu
+                    </ActionButton>
+                  </div>
+                </div>
+                <p className="max-w-2xl text-sm leading-5 text-slate-300/85 sm:text-base sm:leading-7">
+                  {description}
                 </p>
-              ) : null}
-              <h1 className={`${hideEyebrow ? 'mt-0' : 'mt-2 sm:mt-3'} text-[1.65rem] font-black tracking-tight text-white sm:text-5xl`}>
-                {title}
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-5 text-slate-300/85 sm:mt-4 sm:text-base sm:leading-7">
-                {description}
-              </p>
-            </div>
-            <ActionButton onClick={onBack} tone="slate" className="w-full flex-shrink-0 px-4 py-2 text-xs tracking-[0.08em] sm:w-auto sm:px-5 sm:text-sm">
-              ← Menu
-            </ActionButton>
+              </div>
+            ) : (
+              <>
+                <ActionButton onClick={onBack} tone="slate" className="w-full flex-shrink-0 px-4 py-2 text-xs tracking-[0.08em] sm:w-auto sm:px-5 sm:text-sm">
+                  ← Menu
+                </ActionButton>
+                <div>
+                  {!hideEyebrow && eyebrow ? (
+                    <p className="text-xs font-black uppercase tracking-[0.35em] text-cyan-300/90">
+                      {eyebrow}
+                    </p>
+                  ) : null}
+                  <h1 className={`${hideEyebrow ? 'mt-0' : 'mt-2 sm:mt-3'} text-[1.65rem] font-black tracking-tight text-white sm:text-5xl`}>
+                    {title}
+                  </h1>
+                  <p className="mt-3 max-w-2xl text-sm leading-5 text-slate-300/85 sm:mt-4 sm:text-base sm:leading-7">
+                    {description}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
           {compactMobileHeader ? (
@@ -1318,10 +1717,10 @@ function GameScreen({
               <div
                 className={`w-full rounded-full font-black uppercase text-center leading-tight shadow-xl transition-all duration-500 ${
                   winner
-                    ? 'bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 px-3 py-1.5 text-[11px] tracking-[0.08em] text-slate-950 shadow-[0_0_35px_rgba(251,191,36,0.9)] sm:px-4 sm:py-2.5 sm:text-base md:text-xl'
+                    ? 'bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 px-4 py-2 text-[14px] tracking-[0.08em] text-slate-950 shadow-[0_0_35px_rgba(251,191,36,0.9)] sm:px-5 sm:py-3 sm:text-xl md:text-2xl'
                     : currentTurn === 'white'
-                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 px-3 py-1.5 text-[9px] tracking-[0.12em] text-white shadow-blue-500/40 sm:px-4 sm:py-2 sm:text-[11px] md:text-sm md:tracking-[0.2em]'
-                      : 'bg-gradient-to-r from-gray-700 to-gray-900 px-3 py-1.5 text-[9px] tracking-[0.12em] text-white shadow-gray-900/50 sm:px-4 sm:py-2 sm:text-[11px] md:text-sm md:tracking-[0.2em]'
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-2 text-[13px] tracking-[0.12em] text-white shadow-blue-500/40 sm:px-5 sm:py-2.5 sm:text-[16px] md:text-lg md:tracking-[0.2em]'
+                      : 'bg-gradient-to-r from-gray-700 to-gray-900 px-4 py-2 text-[13px] tracking-[0.12em] text-white shadow-gray-900/50 sm:px-5 sm:py-2.5 sm:text-[16px] md:text-lg md:tracking-[0.2em]'
                 }`}
               >
                 {topStatus}
@@ -1602,6 +2001,140 @@ function ColorChoicePicker({ value, onChange }) {
   );
 }
 
+function BotDifficultyPicker({ value, onChange }) {
+  const options = [
+    {
+      value: 'easy',
+      label: 'Easy',
+      detail: 'Takes wins and basic blocks, but still leaves openings and makes softer choices.',
+    },
+    {
+      value: 'medium',
+      label: 'Medium',
+      detail: 'Searches deeper, spots immediate tactics, and plays a steadier positional game.',
+    },
+    {
+      value: 'hard',
+      label: 'Hard',
+      detail: 'Uses the opening book when available, then the strongest practical search in the browser.',
+    },
+  ];
+
+  return (
+    <div>
+      <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300/90">
+        Difficulty
+      </p>
+      <div className="mt-2.5 grid grid-cols-3 gap-2 min-[900px]:hidden">
+        {options.map((option) => {
+          const active = option.value === value;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              className={`min-w-0 rounded-2xl border px-2 py-3 text-center text-sm font-black uppercase tracking-[0.08em] transition ${
+                active
+                  ? 'border-cyan-300/50 bg-cyan-400/10 text-white shadow-[0_0_24px_rgba(34,211,238,0.12)]'
+                  : 'border-white/10 bg-slate-950/80 text-slate-300 hover:border-white/25 hover:bg-white/5'
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-2.5 hidden min-[900px]:grid min-[900px]:gap-3">
+        {options.map((option) => {
+          const active = option.value === value;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              className={`rounded-2xl border px-4 py-3 text-left transition sm:px-5 sm:py-4 ${
+                active
+                  ? 'border-cyan-300/50 bg-cyan-400/10 shadow-[0_0_30px_rgba(34,211,238,0.12)]'
+                  : 'border-white/10 bg-slate-950/80 hover:border-white/25 hover:bg-white/5'
+              }`}
+            >
+              <span className="block text-base font-black text-white">
+                {option.label}
+              </span>
+              <span className="mt-1 block text-sm leading-5 text-slate-300/80 sm:leading-6">
+                {option.detail}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function BotSeatPicker({ value, onChange }) {
+  const options = [
+    { value: 'white', label: 'Play As White', compactLabel: 'White', detail: 'You move first and the bot answers as Black.' },
+    { value: 'black', label: 'Play As Black', compactLabel: 'Black', detail: 'The bot opens as White and you react from move one.' },
+    { value: 'random', label: 'Random Seat', compactLabel: 'Random', detail: 'The app randomly assigns White and Black for this match.' },
+  ];
+
+  return (
+    <div>
+      <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300/90">
+        Your Seat
+      </p>
+      <div className="mt-2.5 grid grid-cols-3 gap-2 min-[900px]:hidden">
+        {options.map((option) => {
+          const active = option.value === value;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              className={`min-w-0 rounded-2xl border px-2 py-3 text-center text-sm font-black uppercase tracking-[0.08em] transition ${
+                active
+                  ? 'border-cyan-300/50 bg-cyan-400/10 text-white shadow-[0_0_24px_rgba(34,211,238,0.12)]'
+                  : 'border-white/10 bg-slate-950/80 text-slate-300 hover:border-white/25 hover:bg-white/5'
+              }`}
+            >
+              {option.compactLabel}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-2.5 hidden min-[900px]:grid min-[900px]:gap-3">
+        {options.map((option) => {
+          const active = option.value === value;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              className={`rounded-2xl border px-4 py-3 text-left transition sm:px-5 sm:py-4 ${
+                active
+                  ? 'border-cyan-300/50 bg-cyan-400/10 shadow-[0_0_30px_rgba(34,211,238,0.12)]'
+                  : 'border-white/10 bg-slate-950/80 hover:border-white/25 hover:bg-white/5'
+              }`}
+            >
+              <span className="block text-base font-black text-white">
+                {option.label}
+              </span>
+              <span className="mt-1 block text-sm leading-5 text-slate-300/80 sm:leading-6">
+                {option.detail}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function InlineNotice({ message }) {
   return (
     <div className="rounded-2xl border border-cyan-400/20 bg-slate-950/75 px-4 py-2.5 text-sm text-slate-200/90 sm:py-3">
@@ -1676,10 +2209,10 @@ function HandDisplay({
           ${isActive ? 'border-yellow-400/80 shadow-[0_0_20px_rgba(250,204,21,0.16)]' : 'border-gray-700/50'}
         `}
       >
-        <p className="mobile-opponent-summary-title text-[10px] font-black uppercase tracking-[0.12em] text-gray-100">
+        <p className="mobile-opponent-summary-title !text-[0.84rem] font-black uppercase leading-none tracking-[0.12em] text-gray-100">
           {title}
         </p>
-        <div className="mobile-opponent-summary-pieces flex w-full items-center justify-center gap-1">
+        <div className="mobile-opponent-summary-pieces mobile-opponent-summary-pieces-large flex w-full items-center justify-center gap-1">
           {summaryPieces.length > 0 ? (
             summaryPieces.map((piece, index) => (
               interactiveSummary ? (
@@ -1740,22 +2273,22 @@ function HandDisplay({
     return (
       <div
         className={`
-          mobile-ultra-compact-tray flex w-full flex-shrink-0 flex-col rounded-[1.15rem] border-2 bg-gradient-to-br shadow-xl sm:rounded-[1.35rem] sm:p-3
-          ${compact ? 'min-h-[6.75rem] p-2' : 'min-h-[8rem] p-2.5'}
+          mobile-ultra-compact-tray ${compact ? 'mobile-ultra-compact-tray-compact' : 'mobile-ultra-compact-tray-default'} flex w-full flex-shrink-0 flex-col rounded-[1.15rem] border-2 bg-gradient-to-br shadow-xl sm:rounded-[1.35rem] sm:p-3
+          ${compact ? 'min-h-[6.75rem] !pt-3.5 px-2 pb-2.5' : 'min-h-[8rem] !pt-4 px-2.5 pb-2.5'}
           sm:min-h-[8.8rem]
           ${player === 'white' ? 'from-indigo-900 to-blue-950' : 'from-slate-800 to-gray-900'}
           ${isActive ? 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.2)]' : 'border-gray-700/50'}
         `}
       >
         <div className="flex items-center justify-between gap-3">
-          <h2 className={`mobile-ultra-compact-tray-title font-black uppercase tracking-[0.14em] text-gray-100 drop-shadow-md sm:text-xs sm:tracking-[0.18em] ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
+          <h2 className={`mobile-ultra-compact-tray-title ${compact ? 'mobile-ultra-compact-tray-title-compact !text-[1rem] sm:!text-[1rem]' : 'mobile-ultra-compact-tray-title-default !text-[1.15rem] sm:!text-[1.15rem]'} font-black uppercase tracking-[0.14em] text-gray-100 drop-shadow-md sm:tracking-[0.18em]`}>
             {title}
           </h2>
           <span className={`mobile-ultra-compact-tray-status font-black uppercase tracking-[0.12em] sm:text-[10px] sm:tracking-[0.16em] ${compact ? 'text-[8px]' : 'text-[9px]'} ${resolvedStatusToneClassName}`}>
             {resolvedStatusLabel}
           </span>
         </div>
-        <div className={`mobile-ultra-compact-tray-grid-wrap -mx-1 flex flex-1 pb-1 sm:mt-3 sm:min-h-[5.6rem] ${compact ? 'mt-1 min-h-[4.15rem]' : 'mt-2 min-h-[5rem]'}`}>
+        <div className={`mobile-ultra-compact-tray-grid-wrap ${compact ? 'mobile-ultra-compact-tray-grid-wrap-compact !mt-4' : 'mobile-ultra-compact-tray-grid-wrap-default !mt-5'} -mx-1 flex flex-1 pb-1 sm:mt-3 sm:min-h-[5.6rem] ${compact ? 'min-h-[4.15rem]' : 'min-h-[5rem]'}`}>
           <div className={`mobile-ultra-compact-tray-grid grid w-full grid-cols-4 px-1 sm:gap-2 ${compact ? 'gap-1' : 'gap-1.5'}`}>
             {traySlots.map((type, index) => {
               if (!type) {
