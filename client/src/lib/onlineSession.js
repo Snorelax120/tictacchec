@@ -44,7 +44,13 @@ export async function joinOnlineLobby({ code, playerName }) {
 }
 
 export function saveActiveOnlineSession(session) {
-  localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(session));
+  const safeSession = {
+    code: session.code,
+    sessionToken: session.sessionToken,
+    playerName: session.playerName,
+  };
+
+  localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(safeSession));
 }
 
 export function loadActiveOnlineSession() {

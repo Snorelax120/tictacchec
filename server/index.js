@@ -7,17 +7,23 @@ import { isValidMove, checkWinner } from './gameUtils.js';
 
 const app = express();
 const httpServer = createServer(app);
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST"]
+    origin: CLIENT_ORIGIN,
+    methods: ['GET', 'POST']
   }
 });
 
 const games = new Map();
 
-app.use(cors());
+app.use(cors({
+  origin: CLIENT_ORIGIN,
+  methods: ['GET', 'POST'],
+}));
 app.use(express.json());
+
+const GAME_ID_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
 
 // Basic route
 app.get('/', (req, res) => {
@@ -29,6 +35,11 @@ io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
 
   socket.on('joinGame', (gameId) => {
+    if (typeof gameId !== 'string' || !GAME_ID_PATTERN.test(gameId)) {
+      socket.emit('error', { message: 'Invalid game id.' });
+      return;
+    }
+
     socket.join(gameId);
     
     if (!games.has(gameId)) {
@@ -60,6 +71,16 @@ io.on('connection', (socket) => {
     if (!game) return;
 
     const { player, type, from, to } = move;
+    const authorizedPlayer = game.players.white === socket.id
+      ? 'white'
+      : game.players.black === socket.id
+        ? 'black'
+        : null;
+
+    if (!authorizedPlayer || player !== authorizedPlayer) {
+      socket.emit('error', { message: 'You are not authorized to move for that side.' });
+      return;
+    }
     
     // Validate the move using gameUtils.js
     const piece = from !== null ? game.state.board[from] : { type, player };

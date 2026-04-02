@@ -1,7 +1,8 @@
 import { errorResponse, jsonResponse, parseJson } from './lib/http.js';
 import { LobbyRoom } from './lobbyRoom.js';
-import { buildWebSocketUrl, createLobbyCode, normalizeName } from './lib/session.js';
+import { buildWebSocketUrl, createLobbyCode } from './lib/session.js';
 import { VALID_COLOR_CHOICES } from './lib/roomState.js';
+import { isTrustedOrigin, validatePlayerName } from './lib/security.js';
 
 function buildLobbyStub(env, code) {
   const id = env.LOBBY_ROOM.idFromName(code);
@@ -9,12 +10,16 @@ function buildLobbyStub(env, code) {
 }
 
 async function createLobby(request, env) {
+  if (!isTrustedOrigin(request)) {
+    return errorResponse('Cross-origin create requests are not allowed.', 403);
+  }
+
   const body = await parseJson(request);
-  const playerName = normalizeName(body?.playerName);
+  const playerNameResult = validatePlayerName(body?.playerName);
   const colorChoice = body?.colorChoice;
 
-  if (!playerName) {
-    return errorResponse('Player name is required.');
+  if (!playerNameResult.ok) {
+    return errorResponse(playerNameResult.error);
   }
 
   if (!VALID_COLOR_CHOICES.has(colorChoice)) {
@@ -27,7 +32,7 @@ async function createLobby(request, env) {
     const response = await stub.fetch('https://room.internal/internal/create', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ code, playerName, colorChoice }),
+      body: JSON.stringify({ code, playerName: playerNameResult.value, colorChoice }),
     });
 
     if (response.status === 409) {
@@ -50,18 +55,22 @@ async function createLobby(request, env) {
 }
 
 async function joinLobby(request, env, code) {
-  const body = await parseJson(request);
-  const playerName = normalizeName(body?.playerName);
+  if (!isTrustedOrigin(request)) {
+    return errorResponse('Cross-origin join requests are not allowed.', 403);
+  }
 
-  if (!playerName) {
-    return errorResponse('Player name is required.');
+  const body = await parseJson(request);
+  const playerNameResult = validatePlayerName(body?.playerName);
+
+  if (!playerNameResult.ok) {
+    return errorResponse(playerNameResult.error);
   }
 
   const stub = buildLobbyStub(env, code);
   const response = await stub.fetch('https://room.internal/internal/join', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ playerName }),
+    body: JSON.stringify({ playerName: playerNameResult.value }),
   });
   const payload = await response.json();
 
@@ -91,6 +100,9 @@ export default {
 
     const wsMatch = path.match(/^\/ws\/([A-Z0-9]{6})$/);
     if (request.headers.get('upgrade') === 'websocket' && wsMatch) {
+      if (!isTrustedOrigin(request)) {
+        return errorResponse('Cross-origin websocket connections are not allowed.', 403);
+      }
       const stub = buildLobbyStub(env, wsMatch[1]);
       return stub.fetch(request);
     }

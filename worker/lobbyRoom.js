@@ -1,5 +1,5 @@
 import { errorResponse, parseJson, jsonResponse } from './lib/http.js';
-import { createSessionToken, hashToken, normalizeName } from './lib/session.js';
+import { createSessionToken, hashToken } from './lib/session.js';
 import {
   ROOM_STORAGE_KEY,
   VALID_COLOR_CHOICES,
@@ -20,6 +20,7 @@ import {
   requestRematch,
   updateReconnectSummary,
 } from './lib/roomState.js';
+import { isTrustedOrigin, parseClientMessage, validatePlayerName } from './lib/security.js';
 
 export class LobbyRoom {
   constructor(state, env) {
@@ -114,18 +115,22 @@ export class LobbyRoom {
   }
 
   async handleCreate(request) {
+    if (!isTrustedOrigin(request)) {
+      return errorResponse('Cross-origin create requests are not allowed.', 403);
+    }
+
     const room = await this.getRoom();
     if (isRoomInitialized(room)) {
       return errorResponse('Lobby code already exists.', 409);
     }
 
     const body = await parseJson(request);
-    const playerName = normalizeName(body?.playerName);
+    const playerNameResult = validatePlayerName(body?.playerName);
     const colorChoice = body?.colorChoice;
     const code = body?.code;
 
-    if (!playerName) {
-      return errorResponse('Player name is required.');
+    if (!playerNameResult.ok) {
+      return errorResponse(playerNameResult.error);
     }
 
     if (!VALID_COLOR_CHOICES.has(colorChoice) || typeof code !== 'string') {
@@ -134,7 +139,7 @@ export class LobbyRoom {
 
     const sessionToken = createSessionToken();
     const sessionHash = await hashToken(sessionToken);
-    const nextRoom = createRoomState(code, playerName, colorChoice, sessionHash);
+    const nextRoom = createRoomState(code, playerNameResult.value, colorChoice, sessionHash);
 
     await this.saveRoom(nextRoom);
 
@@ -147,6 +152,10 @@ export class LobbyRoom {
   }
 
   async handleJoin(request) {
+    if (!isTrustedOrigin(request)) {
+      return errorResponse('Cross-origin join requests are not allowed.', 403);
+    }
+
     const room = await this.getRoom();
 
     if (!isRoomInitialized(room)) {
@@ -155,14 +164,14 @@ export class LobbyRoom {
 
     const nextRoom = cloneRoom(room);
     const body = await parseJson(request);
-    const playerName = normalizeName(body?.playerName);
+    const playerNameResult = validatePlayerName(body?.playerName);
 
-    if (!playerName) {
-      return errorResponse('Player name is required.');
+    if (!playerNameResult.ok) {
+      return errorResponse(playerNameResult.error);
     }
 
     const existingNames = getParticipantEntries(nextRoom).map(([, participant]) => participant.name.toLowerCase());
-    if (existingNames.includes(playerName.toLowerCase())) {
+    if (existingNames.includes(playerNameResult.value.toLowerCase())) {
       return errorResponse('Choose a different name. That name is already in this lobby.', 409);
     }
 
@@ -172,7 +181,7 @@ export class LobbyRoom {
 
     const sessionToken = createSessionToken();
     const sessionHash = await hashToken(sessionToken);
-    joinRoom(nextRoom, { playerName, sessionHash });
+    joinRoom(nextRoom, { playerName: playerNameResult.value, sessionHash });
 
     await this.saveRoom(nextRoom);
 
@@ -185,6 +194,10 @@ export class LobbyRoom {
   }
 
   async handleWebSocket(request) {
+    if (!isTrustedOrigin(request)) {
+      return errorResponse('Cross-origin websocket connections are not allowed.', 403);
+    }
+
     const room = await this.getRoom();
 
     if (!isRoomInitialized(room)) {
@@ -286,13 +299,13 @@ export class LobbyRoom {
       return;
     }
 
-    let parsed;
-    try {
-      parsed = JSON.parse(typeof message === 'string' ? message : new TextDecoder().decode(message));
-    } catch {
-      this.sendJson(socket, { type: 'error', message: 'Invalid message payload.' });
+    const parsedMessage = parseClientMessage(message);
+
+    if (!parsedMessage.ok) {
+      this.sendJson(socket, { type: 'error', message: parsedMessage.error });
       return;
     }
+    const parsed = parsedMessage.payload;
 
     const roomDraft = cloneRoom(room);
     const participantEntry = findParticipantByHash(roomDraft, sessionHash);
